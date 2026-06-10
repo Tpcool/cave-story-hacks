@@ -527,3 +527,46 @@ OFFSET NPC028 ;42BAE0
 0042C18C DD 0042BE84 ;state 3
 0042C190 DD 0042BEC9 ;state 4
 0042C194 DD 0042BFC5 ;state 5
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; start of doukutsu assembler conversion
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+OFFSET NPC028 ;42BAE0
+
+PUSH EBP
+MOV EBP, ESP
+SUB ESP, 0
+SETPOINTER
+
+:FindState
+CMP NPC.ScriptState, 5
+JG 0042C011 ;TBD
+MOV EDX, NPC.ScriptState
+JMP [EDX*4+:StateTable]
+
+;i think this is just setting the downward gravity upon spawning
+:State0
+ADD NPC.Y, 600
+MOV NPC.ScriptState, 1
+
+:Render
+MOV EDX, NPC.FrameNum ;store the framenum
+SHL EDX, 4 ;multiply framenum by 16d to dynamically locate the frame to render
+MOV NPC.DisplayL, EDX ;render left display rect
+ADD EDX, 10 ;shift position from left of the sprite to right
+MOV NPC.DisplayR, EDX ;render right display rect
+MOV EDX, NPC.Direction ;store the direction of the NPC
+SHL EDX, 3 ;multiply direction by 8 to dynamically locate left/right facing sprites
+ADD EDX, 30 ;sprite for NPC begins at 48d Y position
+MOV NPC.DisplayU, EDX ;render up display rect
+ADD EDX, 10 ;shift position from top of the sprite to bottom
+MOV NPC.DisplayD, EDX ;render down display rect
+
+:EndOfCode
+MOV ESP, EBP
+POP EBP
+RETN
+
+:StateTable
+print :State0
