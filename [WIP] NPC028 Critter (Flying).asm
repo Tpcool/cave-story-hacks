@@ -550,6 +550,28 @@ JMP [EDX*4+:StateTable]
 ADD NPC.Y, 600
 MOV NPC.ScriptState, 1
 
+:State1
+CMP NPC.ScriptTimer, 8
+JL 0042BD32 ;TBD
+;check if the NPC X position is far away from the player (far test)
+MOV EDX, NPC.X
+SUB EDX, 10000
+CMP EDX, PlayerXPos
+JGE 0042BD32 ;TBD
+MOV EDX, NPC.X
+ADD EDX, 10000
+CMP EDX, PlayerXPos
+JLE 0042BD32
+;check if the NPC Y position is far away from the player (far test)
+MOV EDX, NPC.Y
+SUB EDX, 10000
+CMP EDX, PlayerYPos
+JGE 0042BD32
+MOV EDX, NPC.Y
+ADD EDX, 6000
+CMP EDX, PlayerYPos
+JLE 0042BD32
+
 :Render
 MOV EDX, NPC.FrameNum ;store the framenum
 SHL EDX, 4 ;multiply framenum by 16d to dynamically locate the frame to render
