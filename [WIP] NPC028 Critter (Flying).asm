@@ -119,7 +119,7 @@ OFFSET NPC028 ;42BAE0
 0042BD26 MOV EDX,DWORD PTR SS:[EBP+8]
 0042BD29 MOV DWORD PTR DS:[EDX+68],1
 0042BD30 JMP SHORT 0042BD54
-;check if the scripttimer is 8 or more ;  <-----------------------------------------------
+;check if the scripttimer is 8 or more 
 0042BD32 MOV EAX,DWORD PTR SS:[EBP+8]
 0042BD35 CMP DWORD PTR DS:[EAX+78],8
 0042BD39 JGE SHORT 0042BD4A
@@ -571,6 +571,7 @@ MOV EDX, NPC.Y
 ADD EDX, 6000
 CMP EDX, PlayerYPos
 JLE 0042BD32 ;TBD
+;update direction to face the player
 CMP NPC.X, PlayerXPos
 JLE 0042BD1C ;TBD
 MOV NPC.Direction, 0
@@ -578,6 +579,144 @@ JMP 0042BD26 ;TBD
 MOV NPC.Direction, 2
 MOV NPC.FrameNum, 1
 JMP 0042BD54 ;TBD
+CMP NPC.ScriptTimer, 8
+JGE 0042BD4A ;TBD
+INC NPC.ScriptTimer
+MOV NPC.FrameNum, 0
+;check if the NPC has(?) been hit
+MOV EDX, NPC.HitTrue
+TEST EDX, EDX
+JE 0042BD80 ;TBD
+MOV NPC.ScriptState, 2
+MOV NPC.FrameNum, 0
+MOV NPC.ScriptTimer, 0
+CMP NPC.ScriptTimer, 8
+JL 0042BDF5 ;TBD
+;check if the NPC X position is far from the player (close test)
+MOV EDX, NPC.X
+SUB EDX, 0C000
+CMP EDX, PlayerXPos
+JGE 0042BDF50 ;TBD 
+MOV EDX, NPC.X
+ADD EDX, 0C000
+CMP EDX, PlayerXPos
+JLE 0042BDF5 ;TBD 
+;check if the NPC Y position is far from the player (close test)
+MOV EDX, NPC.Y
+SUB EDX, 0C000
+CMP EDX, PlayerYPos
+JGE 0042BDF5 ;TBD 
+MOV EDX, NPC.Y
+ADD EDX, 6000
+CMP EDX, PlayerYPos
+JLE 0042BDF5 ;TBD 
+MOV NPC.ScriptState, 2
+MOV NPC.FrameNum, 0
+MOV NPC.ScriptTimer, 0
+JMP 0042C011 ;TBD
+
+:State2
+INC NPC.ScriptTimer
+CMP NPC.ScriptTimer, 8
+JLE 0042BE7F ;TBD
+MOV NPC.ScriptState, 3
+MOV NPC.FrameNum, 2
+;set Y velocity to go UP
+MOV NPC.MoveY, -4CC
+;critter jump sfx
+PUSH 1 
+PUSH 1E 
+CALL PlaySound
+ADD ESP, 8
+SETPOINTER
+;compare NPC x position to player X position
+CMP NPC.X, PlayerXPos
+JLE 0042BE56 ;TBD
+;NPC is to the right of the player, set direction to left
+MOV NPC.Direction, 0
+JMP 0042BE60 ;TBD
+;NPC is to the left of the player, set direction to right
+MOV NPC.Direction, 2
+;check what direction the NPC is in
+CMP NPC.Direction, 0
+JNE 0042BE75 ;TBD
+;left, set left-moving velocity
+MOV NPC.MoveX, -100
+JMP 0042BE7F ;TBD
+;right, set right-moving velocity
+MOV NPC.MoveX, 100
+JMP 0042C011 ;TBD
+
+:State3
+;check if Y velocity is low
+CMP NPC.MoveY, 100
+JLE 0042BEC4 ;TBD
+;save Y position in weird NPC variable
+MOV NPC.CurlyMacro2, NPC.Y
+;set scriptstate to 4
+MOV NPC.ScriptState, 4
+MOV NPC.FrameNum, 3
+MOV NPC.ScriptTimer, 0
+JMP 0042C011 ;TBD
+
+:State4
+CMP NPC.X, PlayerXPos
+JGE 0042BEE3 ;TBD
+;set direction to right
+MOV NPC.Direction, 2
+JMP 0042BEED ;TBD
+MOV NPC.Direction, 0
+;increment scripttimer
+INC NPC.ScriptTimer
+;check if collision with left wall, right wall, ceiling
+AND NPC.Collision, 00000007
+JNE 0042BF10 ;TBD
+;check if scripttimer is less than or equal to 100 frames
+CMP NPC.ScriptTimer, 64
+JLE 0042BF47
+MOV NPC.Damage, 3
+MOV NPC.ScriptState, 5
+MOV NPC.FrameNum, 2
+;research says: this will divide the X velocity by 2 and save it as the new velocity
+MOV EAX, NPC.MoveX
+CDQ
+SUB EAX, EDX
+SAR EAX, 1
+MOV NPC.MoveX, EAX
+JMP 0042C011 ;TBD
+;research says: this is checking if the scripttimer is negative? does weird stuff with EAX?
+MOV EDX, NPC.ScriptTimer
+AND EDX, 80000003
+JNS 0042BF59 ;TBD
+;no clue... TBD. it's doing even more stuff with the already weird value
+DEC EDX
+OR EDX, FFFFFFFC
+INC EDX
+CMP EDX, 1
+JNE 0042BF6A ;TBD
+;play critter fly sfx
+PUSH 1 
+PUSH 6D 
+CALL PlaySound 
+ADD ESP, 8
+SETPOINTER
+;check if the NPC is... NOT colliding with the floor
+MOV EDX, NPC.Collision
+AND EDX, 00000008
+JE 0042BF7F ;TBD
+MOV NPC.MoveY, -200
+INC NPC.FrameTimer
+;check if the frametimer is less than or equal to 0
+CMP NPC.FrameTimer, 0
+JLE 0042BFB0 ;TBD
+MOV NPC.FrameTimer, 0
+INC NPC.FrameNum
+;check if the framenum is less than or equal to 5
+CMP NPC.FrameNum, 5
+JLE 0042BFC3 ;TBD
+;set the framenum to 3 (in an effort to cycle through the frames of flying)
+MOV NPC.FrameNum, 3
+JMP 0042C011 ;TBD
 
 :Render
 MOV EDX, NPC.FrameNum ;store the framenum
@@ -599,3 +738,8 @@ RETN
 
 :StateTable
 print :State0
+print :State1
+print :State2
+print :State3
+print :State4
+print :State5
