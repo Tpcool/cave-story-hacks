@@ -541,7 +541,7 @@ SETPOINTER
 
 :FindState
 CMP NPC.ScriptState, 5
-JG 0042C011 ;TBD
+JG :SetGravity
 MOV EDX, NPC.ScriptState
 JMP [EDX*4+:StateTable]
 
@@ -613,7 +613,7 @@ JLE 0042BDF5 ;TBD
 MOV NPC.ScriptState, 2
 MOV NPC.FrameNum, 0
 MOV NPC.ScriptTimer, 0
-JMP 0042C011 ;TBD
+JMP :SetGravity ;TBD
 
 :State2
 INC NPC.ScriptTimer
@@ -645,7 +645,7 @@ MOV NPC.MoveX, -100
 JMP 0042BE7F ;TBD
 ;right, set right-moving velocity
 MOV NPC.MoveX, 100
-JMP 0042C011 ;TBD
+JMP :SetGravity ;TBD
 
 :State3
 ;check if Y velocity is low
@@ -657,7 +657,7 @@ MOV NPC.CurlyMacro2, NPC.Y
 MOV NPC.ScriptState, 4
 MOV NPC.FrameNum, 3
 MOV NPC.ScriptTimer, 0
-JMP 0042C011 ;TBD
+JMP :SetGravity ;TBD
 
 :State4
 CMP NPC.X, PlayerXPos
@@ -683,7 +683,7 @@ CDQ
 SUB EAX, EDX
 SAR EAX, 1
 MOV NPC.MoveX, EAX
-JMP 0042C011 ;TBD
+JMP :SetGravity ;TBD
 ;research says: this is checking if the scripttimer is negative? does weird stuff with EAX?
 MOV EDX, NPC.ScriptTimer
 AND EDX, 80000003
@@ -716,13 +716,13 @@ CMP NPC.FrameNum, 5
 JLE 0042BFC3 ;TBD
 ;set the framenum to 3 (in an effort to cycle through the frames of flying)
 MOV NPC.FrameNum, 3
-JMP 0042C011 ;TBD
+JMP :SetGravity ;TBD
 
 :State5
 ;check if the NPC is... NOT colliding with the floor
 MOV EDX, NPC.Collision
 AND EDX, 00000008
-JE 0042C011 ;TBD
+JE :SetGravity ;TBD
 MOV NPC.Damage, 2
 MOV NPC.MoveX, 0
 MOV NPC.ScriptTimer, 0
@@ -734,42 +734,57 @@ PUSH 17
 CALL PlaySound 
 ADD ESP, 8
 SETPOINTER
+
+:SetGravity
 CMP NPC.ScriptState, 4
-JE 0042C044
+JE :CheckXVelocity
 ADD NPC.MoveY, 40
 CMP NPC.MoveY, 5FF
-JLE 0042C03F
+JLE :AddVelocitiesToPositions
 MOV NPC.MoveY, 5FF
-JMP 0042C0F8
+JMP :AddVelocitiesToPositions
 
-;add x velocity depending on direction
+:CheckXVelocity
 CMP NPC.X, PlayerXPos
-JGE 0042C063
+JGE :DecreaseXVelocity
 ADD NPC.MoveX, 20
-JMP 0042C072
+JMP :CheckYVelocity
+
+:DecreaseXVelocity
 SUB NPC.MoveX, 20
-;weird
+
+:CheckYVelocity
 CMP NPC.Y, NPC.CurlyMacro2
-JLE 0042C091
+JLE :IncreaseYVelocity
 SUB NPC.MoveY, 10
-JMP 0042C0A0
+JMP :CapPositiveYVelocity
+
+:IncreaseYVelocity
 ADD NPC.MoveY, 10
-;y velocity stuff
+
+:CapPositiveYVelocity
 CMP NPC.MoveY, 200
-JLE 0042C0B6
+JLE :CapNegativeYVelocity
 MOV NPC.MoveY, 200
+
+:CapNegativeYVelocity
 CMP NPC.MoveY, -200
-JGE 0042C0CC
+JGE :CapPositiveXVelocity
 MOV NPC.MoveY, -200
-;x velocity stuff
+
+:CapPositiveXVelocity
 CMP NPC.MoveX, 200
-JLE 0042C0E2
+JLE :CapNegativeXVelocity
 MOV NPC.MoveX, 200
+
+:CapNegativeXVelocity
 CMP NPC.MoveX, -200
-JGE 0042C0F8
+JGE :AddVelocitiesToPositions
 MOV NPC.MoveX, -200
-MOV NPC.X, NPC.MoveX
-MOV NPC.Y, NPC.MoveY
+
+:AddVelocitiesToPositions
+ADD NPC.X, NPC.MoveX
+ADD NPC.Y, NPC.MoveY
 
 :Render
 MOV EDX, NPC.FrameNum ;store the framenum
