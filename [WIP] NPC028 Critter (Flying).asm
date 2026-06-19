@@ -149,29 +149,29 @@ OFFSET NPC028 ;42BAE0
 ;check if scripttimer is less than 8
 0042BD80 MOV ECX,DWORD PTR SS:[EBP+8]
 0042BD83 CMP DWORD PTR DS:[ECX+78],8
-0042BD87 JL SHORT 0042BDF5
+0042BD87 JL SHORT :SetGravity
 ;check if the NPC X position is far from the player (close test)
 0042BD89 MOV EDX,DWORD PTR SS:[EBP+8]
 0042BD8C MOV EAX,DWORD PTR DS:[EDX+8]
 0042BD8F SUB EAX,0C000
 0042BD94 CMP EAX,DWORD PTR DS:[49E654]
-0042BD9A JGE SHORT 0042BDF5
+0042BD9A JGE SHORT :SetGravity
 0042BD9C MOV ECX,DWORD PTR SS:[EBP+8]
 0042BD9F MOV EDX,DWORD PTR DS:[ECX+8]
 0042BDA2 ADD EDX,0C000
 0042BDA8 CMP EDX,DWORD PTR DS:[49E654]
-0042BDAE JLE SHORT 0042BDF5
+0042BDAE JLE SHORT :SetGravity
 ;check if the NPC Y position is far from the player (close test)
 0042BDB0 MOV EAX,DWORD PTR SS:[EBP+8]
 0042BDB3 MOV ECX,DWORD PTR DS:[EAX+0C]
 0042BDB6 SUB ECX,0C000
 0042BDBC CMP ECX,DWORD PTR DS:[49E658]
-0042BDC2 JGE SHORT 0042BDF5
+0042BDC2 JGE SHORT :SetGravity
 0042BDC4 MOV EDX,DWORD PTR SS:[EBP+8]
 0042BDC7 MOV EAX,DWORD PTR DS:[EDX+0C]
 0042BDCA ADD EAX,6000
 0042BDCF CMP EAX,DWORD PTR DS:[49E658]
-0042BDD5 JLE SHORT 0042BDF5
+0042BDD5 JLE SHORT :SetGravity
 ;set scriptstate to 2
 0042BDD7 MOV ECX,DWORD PTR SS:[EBP+8]
 0042BDDA MOV DWORD PTR DS:[ECX+74],2
@@ -181,7 +181,7 @@ OFFSET NPC028 ;42BAE0
 ;set scripttimer to 0
 0042BDEB MOV EAX,DWORD PTR SS:[EBP+8]
 0042BDEE MOV DWORD PTR DS:[EAX+78],0
-0042BDF5 JMP 0042C011
+:SetGravity JMP 0042C011
 
 ;;;;;state 2
 ;increment scripttimer
@@ -552,128 +552,140 @@ MOV NPC.ScriptState, 1
 
 :State1
 CMP NPC.ScriptTimer, 8
-JL 0042BD32 ;TBD
+JL :Section2ForState1
 ;check if the NPC X position is far away from the player (far test)
 MOV EDX, NPC.X
 SUB EDX, 10000
 CMP EDX, PlayerXPos
-JGE 0042BD32 ;TBD
+JGE :Section2ForState1
 MOV EDX, NPC.X
 ADD EDX, 10000
 CMP EDX, PlayerXPos
-JLE 0042BD32
+JLE :Section2ForState1
 ;check if the NPC Y position is far away from the player (far test)
 MOV EDX, NPC.Y
 SUB EDX, 10000
 CMP EDX, PlayerYPos
-JGE 0042BD32 ;TBD
+JGE :Section2ForState1
 MOV EDX, NPC.Y
 ADD EDX, 6000
 CMP EDX, PlayerYPos
-JLE 0042BD32 ;TBD
-;update direction to face the player
+JLE :Section2ForState1
 CMP NPC.X, PlayerXPos
-JLE 0042BD1C ;TBD
+JLE :SetDirectionRightForState1
 MOV NPC.Direction, 0
-JMP 0042BD26 ;TBD
+JMP :SetFrameNumForState1
+
+:SetDirectionRightForState1
 MOV NPC.Direction, 2
+
+:SetFrameNumForState1
 MOV NPC.FrameNum, 1
-JMP 0042BD54 ;TBD
+JMP :CheckDamageTakenForState1
+
+:Section2ForState1
 CMP NPC.ScriptTimer, 8
-JGE 0042BD4A ;TBD
+JGE :ResetFrameNumForState1
 INC NPC.ScriptTimer
+
+:ResetFrameNumForState1
 MOV NPC.FrameNum, 0
+
+:CheckDamageTakenForState1
 ;check if the NPC has(?) been hit
 MOV EDX, NPC.HitTrue
 TEST EDX, EDX
-JE 0042BD80 ;TBD
+JE :CheckScriptTimerForState1
 MOV NPC.ScriptState, 2
 MOV NPC.FrameNum, 0
 MOV NPC.ScriptTimer, 0
+
+:CheckScriptTimerForState1
 CMP NPC.ScriptTimer, 8
-JL 0042BDF5 ;TBD
+JL :SetGravity 
 ;check if the NPC X position is far from the player (close test)
 MOV EDX, NPC.X
 SUB EDX, 0C000
 CMP EDX, PlayerXPos
-JGE 0042BDF50 ;TBD 
+JGE :SetGravity 
 MOV EDX, NPC.X
 ADD EDX, 0C000
 CMP EDX, PlayerXPos
-JLE 0042BDF5 ;TBD 
+JLE :SetGravity 
 ;check if the NPC Y position is far from the player (close test)
 MOV EDX, NPC.Y
 SUB EDX, 0C000
 CMP EDX, PlayerYPos
-JGE 0042BDF5 ;TBD 
+JGE :SetGravity 
 MOV EDX, NPC.Y
 ADD EDX, 6000
 CMP EDX, PlayerYPos
-JLE 0042BDF5 ;TBD 
+JLE :SetGravity 
 MOV NPC.ScriptState, 2
 MOV NPC.FrameNum, 0
 MOV NPC.ScriptTimer, 0
-JMP :SetGravity ;TBD
+JMP :SetGravity
 
 :State2
 INC NPC.ScriptTimer
 CMP NPC.ScriptTimer, 8
-JLE 0042BE7F ;TBD
+JLE :SetGravity
 MOV NPC.ScriptState, 3
 MOV NPC.FrameNum, 2
-;set Y velocity to go UP
 MOV NPC.MoveY, -4CC
-;critter jump sfx
 PUSH 1 
 PUSH 1E 
 CALL PlaySound
 ADD ESP, 8
 SETPOINTER
-;compare NPC x position to player X position
 CMP NPC.X, PlayerXPos
-JLE 0042BE56 ;TBD
-;NPC is to the right of the player, set direction to left
+JLE :SetDirectionRightForState2
 MOV NPC.Direction, 0
-JMP 0042BE60 ;TBD
-;NPC is to the left of the player, set direction to right
+JMP :CheckDirectionForState2
+
+:SetDirectionRightForState2
 MOV NPC.Direction, 2
-;check what direction the NPC is in
+
+:CheckDirectionForState2
 CMP NPC.Direction, 0
-JNE 0042BE75 ;TBD
-;left, set left-moving velocity
+JNE :SetRightXVelocityForState2
 MOV NPC.MoveX, -100
-JMP 0042BE7F ;TBD
-;right, set right-moving velocity
+JMP :SetGravity
+
+:SetRightXVelocityForState2
 MOV NPC.MoveX, 100
-JMP :SetGravity ;TBD
+JMP :SetGravity
 
 :State3
 ;check if Y velocity is low
 CMP NPC.MoveY, 100
-JLE 0042BEC4 ;TBD
+JLE :SetGravity
 ;save Y position in weird NPC variable
 MOV NPC.CurlyMacro2, NPC.Y
 ;set scriptstate to 4
 MOV NPC.ScriptState, 4
 MOV NPC.FrameNum, 3
 MOV NPC.ScriptTimer, 0
-JMP :SetGravity ;TBD
+JMP :SetGravity
 
 :State4
 CMP NPC.X, PlayerXPos
-JGE 0042BEE3 ;TBD
-;set direction to right
+JGE :SetDirectionLeftForState4
 MOV NPC.Direction, 2
-JMP 0042BEED ;TBD
+JMP :IncrementAndCheckScriptTimer
+
+:SetDirectionLeftForState4
 MOV NPC.Direction, 0
-;increment scripttimer
+
+:IncrementAndCheckScriptTimer
 INC NPC.ScriptTimer
 ;check if collision with left wall, right wall, ceiling
 AND NPC.Collision, 00000007
-JNE 0042BF10 ;TBD
-;check if scripttimer is less than or equal to 100 frames
+JNE :SetState5ForState4
 CMP NPC.ScriptTimer, 64
-JLE 0042BF47
+JLE :CalculateWeirdScriptTimerThing
+
+:SetState5ForState4
 MOV NPC.Damage, 3
 MOV NPC.ScriptState, 5
 MOV NPC.FrameNum, 2
@@ -683,46 +695,55 @@ CDQ
 SUB EAX, EDX
 SAR EAX, 1
 MOV NPC.MoveX, EAX
-JMP :SetGravity ;TBD
-;research says: this is checking if the scripttimer is negative? does weird stuff with EAX?
+JMP :SetGravity 
+
+:CalculateWeirdScriptTimerThing
+;research says: this is checking if the scripttimer is negative? does weird stuff with EDX?
 MOV EDX, NPC.ScriptTimer
 AND EDX, 80000003
-JNS 0042BF59 ;TBD
+JNS :CheckWeirdScriptTimerThing 
 ;no clue... TBD. it's doing even more stuff with the already weird value
 DEC EDX
 OR EDX, FFFFFFFC
 INC EDX
+
+:CheckWeirdScriptTimerThing
 CMP EDX, 1
-JNE 0042BF6A ;TBD
+JNE :CheckCollisionForState4
 ;play critter fly sfx
 PUSH 1 
 PUSH 6D 
 CALL PlaySound 
 ADD ESP, 8
 SETPOINTER
+
+:CheckCollisionForState4
 ;check if the NPC is... NOT colliding with the floor
 MOV EDX, NPC.Collision
 AND EDX, 00000008
-JE 0042BF7F ;TBD
+JE :ResetAndIncrementFrameTimer
 MOV NPC.MoveY, -200
+
+:ResetAndIncrementFrameTimer
 INC NPC.FrameTimer
-;check if the frametimer is less than or equal to 0
 CMP NPC.FrameTimer, 0
-JLE 0042BFB0 ;TBD
+JLE :CheckFlyingFrame
 MOV NPC.FrameTimer, 0
 INC NPC.FrameNum
+
+:CheckFlyingFrame
 ;check if the framenum is less than or equal to 5
 CMP NPC.FrameNum, 5
-JLE 0042BFC3 ;TBD
+JLE :SetGravity
 ;set the framenum to 3 (in an effort to cycle through the frames of flying)
 MOV NPC.FrameNum, 3
-JMP :SetGravity ;TBD
+JMP :SetGravity
 
 :State5
 ;check if the NPC is... NOT colliding with the floor
 MOV EDX, NPC.Collision
 AND EDX, 00000008
-JE :SetGravity ;TBD
+JE :SetGravity
 MOV NPC.Damage, 2
 MOV NPC.MoveX, 0
 MOV NPC.ScriptTimer, 0
