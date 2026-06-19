@@ -571,7 +571,8 @@ MOV EDX, NPC.Y
 ADD EDX, 6000
 CMP EDX, PlayerYPos
 JLE :Section2ForState1
-CMP NPC.X, PlayerXPos
+MOV EDX, NPC.X
+CMP EDX, PlayerXPos
 JLE :SetDirectionRightForState1
 MOV NPC.Direction, 0
 JMP :SetFrameNumForState1
@@ -638,7 +639,8 @@ PUSH 1E
 CALL PlaySound
 ADD ESP, 8
 SETPOINTER
-CMP NPC.X, PlayerXPos
+MOV EDX, NPC.X
+CMP EDX, PlayerXPos
 JLE :SetDirectionRightForState2
 MOV NPC.Direction, 0
 JMP :CheckDirectionForState2
@@ -661,7 +663,8 @@ JMP :SetGravity
 CMP NPC.MoveY, 100
 JLE :SetGravity
 ;save Y position in weird NPC variable
-MOV NPC.CurlyMacro2, NPC.Y
+MOV EDX, NPC.Y
+MOV NPC.CurlyMacro2, EDX
 ;set scriptstate to 4
 MOV NPC.ScriptState, 4
 MOV NPC.FrameNum, 3
@@ -669,7 +672,8 @@ MOV NPC.ScriptTimer, 0
 JMP :SetGravity
 
 :State4
-CMP NPC.X, PlayerXPos
+MOV EDX, NPC.X
+CMP EDX, PlayerXPos
 JGE :SetDirectionLeftForState4
 MOV NPC.Direction, 2
 JMP :IncrementAndCheckScriptTimer
@@ -766,7 +770,8 @@ MOV NPC.MoveY, 5FF
 JMP :AddVelocitiesToPositions
 
 :CheckXVelocity
-CMP NPC.X, PlayerXPos
+MOV EDX, NPC.X
+CMP EDX, PlayerXPos
 JGE :DecreaseXVelocity
 ADD NPC.MoveX, 20
 JMP :CheckYVelocity
@@ -775,7 +780,8 @@ JMP :CheckYVelocity
 SUB NPC.MoveX, 20
 
 :CheckYVelocity
-CMP NPC.Y, NPC.CurlyMacro2
+MOV EDX, NPC.Y
+CMP EDX, NPC.CurlyMacro2
 JLE :IncreaseYVelocity
 SUB NPC.MoveY, 10
 JMP :CapPositiveYVelocity
@@ -804,8 +810,10 @@ JGE :AddVelocitiesToPositions
 MOV NPC.MoveX, -200
 
 :AddVelocitiesToPositions
-ADD NPC.X, NPC.MoveX
-ADD NPC.Y, NPC.MoveY
+MOV EDX, NPC.MoveX
+ADD NPC.X, EDX
+MOV EDX, NPC.MoveY
+ADD NPC.Y, EDX
 
 :Render
 MOV EDX, NPC.FrameNum ;store the framenum
