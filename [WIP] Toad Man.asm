@@ -64,24 +64,23 @@ ADD NPC.Y, EDX
 JMP :Render
 
 :State1 ;JUMPS FOR EXACTLY 50 FRAMES
-CMP NPC.MoveY, 0
-JLE :test
+;CMP NPC.MoveY, 0
+;JLE :test
 ;CMP NPC.Collision, 8 ;check if the NPC is making contact with the ground
 ;JNE :SetState5 ;end the jumping state code
 
-AND NPC.Collision, 6 ;check if the NPC is making contact with a wall
-JNE :CollisionWall
-CMP NPC.Collision, 2 ;check if the NPC is making contact with the ceiling
-JNE :CollisionCeiling
+;AND NPC.Collision, 6 ;check if the NPC is making contact with a wall
+;JNE :CollisionWall
+;CMP NPC.Collision, 2 ;check if the NPC is making contact with the ceiling
+;JNE :CollisionCeiling
 
 :test
 ADD NPC.MoveY, GRAVITY
 MOV EDX, NPC.MoveY
 ADD NPC.Y, EDX
+MOV EDX, NPC.Y
 ;Gravity stuff
 JMP :Render
-
-
 
 :CollisionWall
 ;Stop X axis movement
