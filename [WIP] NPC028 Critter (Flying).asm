@@ -11,7 +11,7 @@ JG :SetGravity
 MOV EDX, NPC.ScriptState
 JMP [EDX*4+:StateTable]
 
-;i think this is just setting the downward gravity upon spawning
+;not entirely sure what the point of this is, as nothing much changes when it's removed, but it appears as if it's starting the NPC slightly further down. possibly for initial gravity?
 :State0
 ADD NPC.Y, 600
 MOV NPC.ScriptState, 1

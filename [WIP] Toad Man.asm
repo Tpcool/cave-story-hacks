@@ -18,7 +18,7 @@ OFFSET NPC160 ;Pooh Black, 447700
 
 #DEFINE
 
-GRAVITY = 80
+GRAVITY = 70
 
 #ENDDEFINE
 
@@ -55,9 +55,16 @@ JMP :Render
 MOV NPC.ScriptState, 1
 MOV NPC.FrameNum, 7
 MOV NPC.FrameTimer, 0
-;Get X position
-;Start jump
-MOV EDX, 19
+;X velocity
+MOV EAX, PlayerXPos
+SUB EAX, NPC.X
+CDQ
+MOV EBX, 32 ;50 frame jump
+IDIV EBX ;use EBX instead?
+MOV NPC.MoveX, EAX ;store the quotient (use local var instead?)
+MOV NPC.ObjectTimer, EDX ;store the remainder (use local var instead?)
+;Y velocity
+MOV EDX, 19 ;half of the 50 frame jump...
 IMUL EDX, EDX, -GRAVITY
 MOV NPC.MoveY, EDX
 ADD NPC.Y, EDX
@@ -67,14 +74,27 @@ JMP :Render
 ;CMP NPC.MoveY, 0
 ;JLE :test
 ;CMP NPC.Collision, 8 ;check if the NPC is making contact with the ground
-;JNE :SetState5 ;end the jumping state code
+MOV EDX, NPC.Collision
+AND EDX, 8
+JNE :SetState5 ;end the jumping state code
 
 ;AND NPC.Collision, 6 ;check if the NPC is making contact with a wall
 ;JNE :CollisionWall
 ;CMP NPC.Collision, 2 ;check if the NPC is making contact with the ceiling
 ;JNE :CollisionCeiling
 
-:test
+;X velocity
+MOV EDX, NPC.MoveX
+CMP NPC.Direction, 0
+JE :XLeftMovement
+ADD NPC.X, EDX
+JMP :YMovement
+
+:XLeftMovement
+ADD NPC.X, EDX
+
+;Y velocity
+:YMovement
 ADD NPC.MoveY, GRAVITY
 MOV EDX, NPC.MoveY
 ADD NPC.Y, EDX
@@ -176,11 +196,14 @@ INC NPC.FrameTimer
 JMP :Render
 
 :SetState5 
+MOV NPC.MoveY, 0
 MOV NPC.ScriptState, 5
 MOV NPC.FrameNum, 1
 MOV NPC.FrameTimer, 0
 
 :State5 ;crouch after landing for 7 frames
+MOV EDX, NPC.MoveY
+MOV EDX, NPC.Y
 CMP NPC.FrameTimer, 7
 JE :RestartAfterLanding
 INC NPC.FrameTimer
