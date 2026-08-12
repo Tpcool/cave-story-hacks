@@ -14,7 +14,7 @@
 ;-- FrameNum 6, Dance 2
 ;-- FrameNum 7, Jump
 
-OFFSET NPC160 ;Pooh Black, 447700
+OFFSET NPC162 ;447E90
 
 #DEFINE
 
@@ -181,6 +181,21 @@ MOV NPC.FrameNum, 5
 ;call rain flush NPC, lasts for 120 frames
 ;first 8 frames do not hurt
 ;only hurts right when it spawns
+XOR EDX, EDX
+PUSH EDX ;with this entity slot... 
+PUSH EDX ;with no parent or tracker... 
+PUSH EDX ;with no particular direction...
+PUSH EDX ;with no Y velocity... 
+PUSH EDX ;with no X velocity... 
+MOV EDX, NPC.Y
+PUSH EDX ;Y position
+MOV EDX, NPC.X
+PUSH EDX ;X position
+PUSH A0 ;rain flush generator
+CALL CreateNPC ;spawn the NPC 
+ADD ESP, 20 ;fix the stack
+SETPOINTER
+
 INC NPC.ScriptTimer
 JMP :Render
 
