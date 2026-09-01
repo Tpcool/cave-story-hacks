@@ -68,6 +68,12 @@ MOV EDX, 19 ;half of the 50 frame jump...
 IMUL EDX, EDX, -GRAVITY
 MOV NPC.MoveY, EDX
 ADD NPC.Y, EDX
+;play jump noise
+PUSH 1 
+PUSH 6C 
+CALL PlaySound 
+ADD ESP, 8
+SETPOINTER
 JMP :Render
 
 :State1 ;JUMPS FOR EXACTLY 50 FRAMES
@@ -194,6 +200,11 @@ PUSH EDX ;X position
 PUSH A0 ;rain flush generator
 CALL CreateNPC ;spawn the NPC 
 ADD ESP, 20 ;fix the stack
+;play hiopen
+PUSH 1 
+PUSH 99 
+CALL PlaySound 
+ADD ESP, 8
 SETPOINTER
 
 INC NPC.ScriptTimer
@@ -215,6 +226,12 @@ MOV NPC.MoveY, 0
 MOV NPC.ScriptState, 5
 MOV NPC.FrameNum, 1
 MOV NPC.FrameTimer, 0
+;play landing
+PUSH 1 
+PUSH 6F 
+CALL PlaySound 
+ADD ESP, 8
+SETPOINTER
 
 :State5 ;crouch after landing for 7 frames
 MOV EDX, NPC.MoveY
