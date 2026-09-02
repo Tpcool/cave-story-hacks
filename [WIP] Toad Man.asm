@@ -60,9 +60,9 @@ MOV EAX, PlayerXPos
 SUB EAX, NPC.X
 CDQ
 MOV EBX, 32 ;50 frame jump
-IDIV EBX ;use EBX instead?
-MOV NPC.MoveX, EAX ;store the quotient (use local var instead?)
-MOV NPC.ObjectTimer, EDX ;store the remainder (use local var instead?)
+IDIV EBX
+MOV NPC.MoveX, EAX ;store the quotient, which is how far the NPC will need to go each frame to reach the target
+MOV NPC.Directive, EDX ;in an unused function, store the remainder, which is used to more precisely determine where the NPC will need to land frame-by-frame
 ;Y velocity
 MOV EDX, 19 ;half of the 50 frame jump...
 IMUL EDX, EDX, -GRAVITY
