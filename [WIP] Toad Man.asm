@@ -1,3 +1,7 @@
+OFFSET NPC162 ;447E90
+; TOAD MAN
+; 
+
 ;-- ScriptState 0, Idle
 ;-- ScriptState 1, Jump
 ;-- ScriptState 2, Dance
@@ -14,17 +18,15 @@
 ;-- FrameNum 6, Dance 2
 ;-- FrameNum 7, Jump
 
-OFFSET NPC162 ;447E90
-
 #DEFINE
 
-GRAVITY = 70
+GRAVITY = 70 ;how high the NPC will jump
+GRAVITY_CAP = EF1 ;if the NPC continues to fall, the fall speed will cap out to this amount. for reference, the amount EF1 is the highest you can go without him falling through the floor.
+IDLE_TIME = 40 ;how long the NPC waits before starting the attack. in line with the logic this NPC is based on, the idle time counter will not reset after landing from a jump.
 
 #ENDDEFINE
 
-PUSH EBP ;setting up...
-MOV EBP, ESP ;...the stack
-SUB ESP, 0 ;setting up local variables
+ENTER 0, 0 ;set up the stack
 SETPOINTER
 
 :StateCheck
@@ -44,7 +46,7 @@ MOV NPC.Direction, 0
 JMP :State0CheckAction
 
 :State0CheckAction
-CMP NPC.ScriptTimer, 40 ;After 64 frames of idling...
+CMP NPC.ScriptTimer, IDLE_TIME ;After idling the preset amount of time...
 JE :SetState2 ;Start the dance
 TEST KeyPressed, 00000020 ;check if SHOOT is pressed
 JNZ :SetState4 ;if it is, go to the jump state
@@ -102,6 +104,13 @@ ADD NPC.X, EDX
 ;Y velocity
 :YMovement
 ADD NPC.MoveY, GRAVITY
+CMP NPC.MoveY, GRAVITY_CAP
+JL :SetYMovement
+
+:CapYMovement
+MOV NPC.MoveY, GRAVITY_CAP 
+
+:SetYMovement
 MOV EDX, NPC.MoveY
 ADD NPC.Y, EDX
 MOV EDX, NPC.Y
@@ -282,8 +291,7 @@ ADD EDX, 28 ;shift position from top of the sprite to bottom
 MOV NPC.DisplayD, EDX ;render down display rect
 
 :EndOfCode
-MOV ESP, EBP
-POP EBP
+LEAVE
 RETN
 
 :StateTable
