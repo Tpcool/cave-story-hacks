@@ -20,6 +20,7 @@ OFFSET NPC162 ;447E90
 
 #DEFINE
 
+JUMP_AIR_TIME = 32 ;how many frames the NPC will be in the air for after jumping
 GRAVITY = 70 ;how high the NPC will jump
 GRAVITY_CAP = EF1 ;if the NPC continues to fall, the fall speed will cap out to this amount. for reference, the amount EF1 is the highest you can go without him falling through the floor.
 IDLE_TIME = 40 ;how long the NPC waits before starting the attack. in line with the logic this NPC is based on, the idle time counter will not reset after landing from a jump.
@@ -61,12 +62,13 @@ MOV NPC.FrameTimer, 0
 MOV EAX, PlayerXPos
 SUB EAX, NPC.X
 CDQ
-MOV EBX, 32 ;50 frame jump
+MOV EBX, JUMP_AIR_TIME
 IDIV EBX
 MOV NPC.MoveX, EAX ;store the quotient, which is how far the NPC will need to go each frame to reach the target
 MOV NPC.Directive, EDX ;in an unused function, store the remainder, which is used to more precisely determine where the NPC will need to land frame-by-frame
 ;Y velocity
-MOV EDX, 19 ;half of the 50 frame jump...
+MOV EDX, JUMP_AIR_TIME
+SHR EDX, 1 ;get half of the air time
 IMUL EDX, EDX, -GRAVITY
 MOV NPC.MoveY, EDX
 ADD NPC.Y, EDX
@@ -78,20 +80,12 @@ ADD ESP, 8
 SETPOINTER
 JMP :Render
 
-:State1 ;JUMPS FOR EXACTLY 50 FRAMES
-;CMP NPC.MoveY, 0
-;JLE :test
-;CMP NPC.Collision, 8 ;check if the NPC is making contact with the ground
+:State1
+;end the jumping state code if the NPC has reached the floor
 MOV EDX, NPC.Collision
 AND EDX, 8
-JNE :SetState5 ;end the jumping state code
-
-;AND NPC.Collision, 6 ;check if the NPC is making contact with a wall
-;JNE :CollisionWall
-;CMP NPC.Collision, 2 ;check if the NPC is making contact with the ceiling
-;JNE :CollisionCeiling
-
-;X velocity
+JNE :SetState5
+;Use the X movement that was calculated to update X position depending on the NPC's direction
 MOV EDX, NPC.MoveX
 CMP NPC.Direction, 0
 JE :XLeftMovement
@@ -101,7 +95,7 @@ JMP :YMovement
 :XLeftMovement
 ADD NPC.X, EDX
 
-;Y velocity
+;Move the NPC further up or down depending on the preset gravity value, and set the maximum fall speed if it's reached
 :YMovement
 ADD NPC.MoveY, GRAVITY
 CMP NPC.MoveY, GRAVITY_CAP
@@ -114,19 +108,6 @@ MOV NPC.MoveY, GRAVITY_CAP
 MOV EDX, NPC.MoveY
 ADD NPC.Y, EDX
 MOV EDX, NPC.Y
-;Gravity stuff
-JMP :Render
-
-:CollisionWall
-;Stop X axis movement
-;Set Y axis movement depending on current spot in the jump
-;Gravity stuff Y axis
-CMP NPC.Collision, 2 ;check if the NPC is also touching the ceiling
-JNE :CollisionCeiling
-JMP :Render
-
-:CollisionCeiling
-;Stop Y axis movement
 JMP :Render
 
 :SetState2
@@ -135,16 +116,16 @@ MOV NPC.ScriptTimer, 0
 MOV NPC.FrameNum, 3
 MOV NPC.FrameTimer, 0
 
-:State2 ;6 frames in between each dance frame
+:State2
 CMP NPC.ScriptTimer, 30 ;after 48 more frames of idling...
 JE :SetState3 ;start the attack
-TEST KeyPressed, 00000020 ;check if SHOOT is pressed
-JNZ :Restart ;if it is, restart
-CMP NPC.ScriptTimer, 6
+TEST KeyPressed, 00000020 ;check if the player has pressed the shoot button
+JNZ :Restart ;go back to idle state
+CMP NPC.ScriptTimer, 6 ;on the 6th frame of this state, update the animation where the NPC begins to raise its hands
 JE :SetRaiseArms
-CMP NPC.FrameTimer, 6 ;cycle between dance frames
+CMP NPC.FrameTimer, 6 ;on every 6th frame, update the animation
 JE :SetDanceFrame1
-CMP NPC.FrameTimer, C
+CMP NPC.FrameTimer, C ;on every 12th frame, update the animation, and reset the frame timer
 JE :SetDanceFrame2
 INC NPC.ScriptTimer
 INC NPC.FrameTimer
@@ -174,17 +155,14 @@ MOV NPC.ScriptTimer, 0
 MOV NPC.FrameNum, 4
 MOV NPC.FrameTimer, 0
 
-:State3 ;7 frames when arms are tucked (no rain flush) 
-;11 frames between each dance frame, attack is present for 120 frames
-;first 8 frames of rain flush doesn't hurt!
-;last 8 frames he is still dancing but no more rain flush
-CMP NPC.ScriptTimer, 7
+:State3
+CMP NPC.ScriptTimer, 7 ;on the 7th frame, spawn the attack
 JE :SpawnAttack
-CMP NPC.ScriptTimer, 80
+CMP NPC.ScriptTimer, 80 ;on the 80th frame, go back to the idle state
 JE :Restart
-CMP NPC.FrameTimer, B
+CMP NPC.FrameTimer, B ;on every 11th frame, update the animation
 JE :SetDanceFrame1
-CMP NPC.FrameTimer, 16
+CMP NPC.FrameTimer, 16 ;on every 22nd frame, update the animation, and reset the frame timer
 JE :SetDanceFrame2
 INC NPC.ScriptTimer
 INC NPC.FrameTimer
@@ -193,9 +171,7 @@ JMP :Render
 :SpawnAttack
 MOV NPC.FrameTimer, C
 MOV NPC.FrameNum, 5
-;call rain flush NPC, lasts for 120 frames
-;first 8 frames do not hurt
-;only hurts right when it spawns
+;create NPC
 XOR EDX, EDX
 PUSH EDX ;with this entity slot... 
 PUSH EDX ;with no parent or tracker... 
@@ -203,19 +179,18 @@ PUSH EDX ;with no particular direction...
 PUSH EDX ;with no Y velocity... 
 PUSH EDX ;with no X velocity... 
 MOV EDX, NPC.Y
-PUSH EDX ;Y position
+PUSH EDX ;Y position of NPC
 MOV EDX, NPC.X
-PUSH EDX ;X position
-PUSH A0 ;rain flush generator
+PUSH EDX ;X position of NPC
+PUSH A0 ;rain flush generator NPC
 CALL CreateNPC ;spawn the NPC 
 ADD ESP, 20 ;fix the stack
-;play hiopen
+;play attack sound effect
 PUSH 1 
-PUSH 99 
+PUSH 99 ;99 = hiopen
 CALL PlaySound 
 ADD ESP, 8
 SETPOINTER
-
 INC NPC.ScriptTimer
 JMP :Render
 
@@ -224,39 +199,36 @@ MOV NPC.ScriptState, 4
 MOV NPC.FrameNum, 1
 MOV NPC.FrameTimer, 0
 
-:State4 ;crouch before jumping for 6 frames
-CMP NPC.FrameTimer, 6
+:State4
+CMP NPC.FrameTimer, 6 ;animate crouching for 6 frames before going into jumping state
 JE :SetState1
 INC NPC.FrameTimer
 JMP :Render
 
 :SetState5 
-MOV NPC.MoveY, 0
 MOV NPC.ScriptState, 5
 MOV NPC.FrameNum, 1
 MOV NPC.FrameTimer, 0
-;play landing
+;play landing sound effect
 PUSH 1 
-PUSH 6F 
+PUSH 6F ;6F = large critter landing
 CALL PlaySound 
 ADD ESP, 8
 SETPOINTER
 
-:State5 ;crouch after landing for 7 frames
-MOV EDX, NPC.MoveY
-MOV EDX, NPC.Y
-CMP NPC.FrameTimer, 7
+:State5
+CMP NPC.FrameTimer, 7 ;animate crouching for 7 frames before going back into idle state
 JE :RestartAfterLanding
 INC NPC.FrameTimer
 JMP :Render
 
-:RestartAfterLanding
+:RestartAfterLanding ;this restart snippet has the distinction of not resetting the script timer which allows the dance scriptstate to potentially begin sooner after langing from a jump
 MOV NPC.ScriptState, 0
 MOV NPC.FrameNum, 0
 MOV NPC.FrameTimer, 0
 JMP :Render
 
-:Restart
+:Restart ;reset all values back to the idle state
 MOV NPC.ScriptTimer, 0
 MOV NPC.ScriptState, 0
 MOV NPC.FrameNum, 0
