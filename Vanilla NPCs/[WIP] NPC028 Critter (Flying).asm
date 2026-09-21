@@ -1,8 +1,6 @@
 OFFSET NPC028 ;42BAE0
 
-PUSH EBP
-MOV EBP, ESP
-SUB ESP, 0
+ENTER 0, 0
 SETPOINTER
 
 :FindState
@@ -16,6 +14,7 @@ JMP [EDX*4+:StateTable]
 ADD NPC.Y, 600
 MOV NPC.ScriptState, 1
 
+;idle state, checking for how close the player is to this NPC
 :State1
 CMP NPC.ScriptTimer, 8
 JL :Section2ForState1
@@ -93,6 +92,7 @@ MOV NPC.FrameNum, 0
 MOV NPC.ScriptTimer, 0
 JMP :SetGravity
 
+;start of jump state
 :State2
 INC NPC.ScriptTimer
 CMP NPC.ScriptTimer, 8
@@ -124,6 +124,7 @@ JMP :SetGravity
 MOV NPC.MoveX, 100
 JMP :SetGravity
 
+;jump state
 :State3
 ;check if Y velocity is low
 CMP NPC.MoveY, 100
@@ -137,6 +138,7 @@ MOV NPC.FrameNum, 3
 MOV NPC.ScriptTimer, 0
 JMP :SetGravity
 
+;start of flight state
 :State4
 MOV EDX, NPC.X
 CMP EDX, PlayerXPos
@@ -209,6 +211,7 @@ JLE :SetGravity
 MOV NPC.FrameNum, 3
 JMP :SetGravity
 
+;landing after flying state
 :State5
 ;check if the NPC is... NOT colliding with the floor
 MOV EDX, NPC.Collision
@@ -295,8 +298,7 @@ ADD EDX, 10 ;shift position from top of the sprite to bottom
 MOV NPC.DisplayD, EDX ;render down display rect
 
 :EndOfCode
-MOV ESP, EBP
-POP EBP
+LEAVE
 RETN
 
 :StateTable
