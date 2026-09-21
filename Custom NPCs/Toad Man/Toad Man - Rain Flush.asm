@@ -6,9 +6,7 @@ OFFSET NPC161 ;447CB0
 ; back around to the other side of the screen to create a looping effect. After the defined amount
 ; of frames has elapsed, it will delete itself.
 
-PUSH EBP ;setting up...
-MOV EBP, ESP ;...the stack
-SUB ESP, 0 ;setting up local variables
+ENTER 0, 0
 SETPOINTER
 
 #DEFINE
@@ -54,6 +52,5 @@ MOV NPC.DisplayD, 8
 
 :EndOfCode ;update the scripttimer to keep track of how long the NPC is active for, then end the code
 ADD NPC.ScriptTimer, 1
-MOV ESP, EBP
-POP EBP
+LEAVE
 RETN

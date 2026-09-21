@@ -1,6 +1,8 @@
 OFFSET NPC162 ;447E90
 ; TOAD MAN
-; 
+; This NPC is made to be a near exact recreation of the Toad Man boss in Mega Man 4. Like in that fight,
+; this NPC will wait around and start dancing, and will then spawn the Rain Flush - Generator NPC if the
+; shoot button is not pressed. If it is, then the NPC will jump towards the player.
 
 ;-- ScriptState 0, Idle
 ;-- ScriptState 1, Jump
@@ -273,24 +275,3 @@ print :State2
 print :State3
 print :State4
 print :State5
-
-; Run this once per frame instead if you want perfect precision for x axis jump
-
-; 1. Move by base velocity
-;mov eax, [EnemyCurrentX]
-;add eax, [VelocityX]
-
-; 2. Accumulate the remainder
-;mov ecx, [CurrentAccumulator]
-;add ecx, [XRemainder]          ; Add the remainder we saved earlier
-
-;cmp ecx, 50                    ; Have we accumulated a full pixel?
-;jl .skip_extra_pixel           ; If less than 50, skip extra movement
-
-; 3. Add the extra pixel and adjust accumulator
-;inc eax                        ; Move 1 extra pixel
-;sub ecx, 50                    ; Subtract 50 from accumulator
-
-;.skip_extra_pixel:
-;mov [CurrentAccumulator], ecx  ; Save updated accumulator
-;mov [EnemyCurrentX], eax       ; Save updated X position
