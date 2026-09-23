@@ -1,4 +1,27 @@
 OFFSET NPC028 ;42BAE0
+; State 0: adjusts positioning of NPC upon initializing, then goes to state 1
+; State 1: NPC is idle. tests how close the player is. if the player is close, NPC will go to state 2
+; State 2: 
+; State 3: 
+; State 4: 
+; State 5: 
+
+#DEFINE
+
+;these values determine how close the NPC must be to the player before the NPC's frame changes to its alert appearance
+HORIZONTAL_DISTANCE_CHECK_FRAME = 10000
+UP_DISTANCE_CHECK_FRAME = 10000
+DOWN_DISTANCE_CHECK_FRAME = 6000
+
+;these values determine how close the NPC must be to the player before the NPC switches to its attack state
+HORIZONTAL_DISTANCE_CHECK_ATTACK = C000
+UP_DISTANCE_CHECK_ATTACK = C000
+DOWN_DISTANCE_CHECK_ATTACK = 6000
+
+WAIT_BEFORE_ALERT = 8 ;how long the NPC will wait before it checks to see if it should change its frame to its alert appearance
+WAIT_BEFORE_ATTACK = 8 ;how long the NPC will wait before it checks to see if it should attack or not
+
+#ENDDEFINE
 
 ENTER 0, 0
 SETPOINTER
@@ -9,85 +32,77 @@ JG :SetGravity
 MOV EDX, NPC.ScriptState
 JMP [EDX*4+:StateTable]
 
-;not entirely sure what the point of this is, as nothing much changes when it's removed, but it appears as if it's starting the NPC slightly further down. possibly for initial gravity?
 :State0
 ADD NPC.Y, 600
 MOV NPC.ScriptState, 1
 
-;idle state, checking for how close the player is to this NPC
 :State1
-CMP NPC.ScriptTimer, 8
-JL :Section2ForState1
-;check if the NPC X position is far away from the player (far test)
+;;; section 1 - checks distance to see if NPC should be put in its alert frame ;;;
+CMP NPC.ScriptTimer, WAIT_BEFORE_ALERT ;if it hasn't been this many frames yet, don't do the player distance check
+JL :SetIdleFrameForState1
 MOV EDX, NPC.X
-SUB EDX, 10000
-CMP EDX, PlayerXPos
-JGE :Section2ForState1
+SUB EDX, HORIZONTAL_DISTANCE_CHECK_FRAME
+CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player
+JGE :SetIdleFrameForState1 ;if it is, then skip to the next section
 MOV EDX, NPC.X
-ADD EDX, 10000
-CMP EDX, PlayerXPos
-JLE :Section2ForState1
+ADD EDX, HORIZONTAL_DISTANCE_CHECK_FRAME ;check if the NPC X position is far away from the player (from the other direction this time)
+CMP EDX, PlayerXPos ;if it is, then skip to the next section
+JLE :SetIdleFrameForState1
 ;check if the NPC Y position is far away from the player (far test)
 MOV EDX, NPC.Y
-SUB EDX, 10000
-CMP EDX, PlayerYPos
-JGE :Section2ForState1
+SUB EDX, UP_DISTANCE_CHECK_FRAME ;check if the NPC Y position is far away from the player
+CMP EDX, PlayerYPos ;if it is, then skip to the next section
+JGE :SetIdleFrameForState1
 MOV EDX, NPC.Y
-ADD EDX, 6000
-CMP EDX, PlayerYPos
-JLE :Section2ForState1
+ADD EDX, DOWN_DISTANCE_CHECK_FRAME ;check if the NPC Y position is far away from the player (from the other direction this time)
+CMP EDX, PlayerYPos ;if it is, then skip to the next section
+JLE :SetIdleFrameForState1
 MOV EDX, NPC.X
-CMP EDX, PlayerXPos
+CMP EDX, PlayerXPos ;set the NPC direction based on where the player is relative to the NPC
 JLE :SetDirectionRightForState1
 MOV NPC.Direction, 0
-JMP :SetFrameNumForState1
+JMP :SetAlertFrameForState1
 
 :SetDirectionRightForState1
 MOV NPC.Direction, 2
 
-:SetFrameNumForState1
-MOV NPC.FrameNum, 1
+:SetAlertFrameForState1
+MOV NPC.FrameNum, 1 ;if we haven't done a jump from the distance checks, then the player is close to the NPC and should be put in its alert frame
 JMP :CheckDamageTakenForState1
 
-:Section2ForState1
-CMP NPC.ScriptTimer, 8
-JGE :ResetFrameNumForState1
-INC NPC.ScriptTimer
-
-:ResetFrameNumForState1
+:SetIdleFrameForState1
 MOV NPC.FrameNum, 0
 
 :CheckDamageTakenForState1
-;check if the NPC has not been hit
+INC NPC.ScriptTimer
 MOV EDX, NPC.HitTrue
-TEST EDX, EDX
-JE :CheckScriptTimerForState1
-MOV NPC.ScriptState, 2
+TEST EDX, EDX ;if the NPC has not been hit...
+JE :CheckScriptTimerForState1 ;...then skip to the next section
+MOV NPC.ScriptState, 2 ;if the NPC has been hit, then set it up to put it in the attack state
 MOV NPC.FrameNum, 0
 MOV NPC.ScriptTimer, 0
 
 :CheckScriptTimerForState1
-CMP NPC.ScriptTimer, 8
-JL :SetGravity 
-;check if the NPC X position is far from the player (close test)
+CMP NPC.ScriptTimer, WAIT_BEFORE_ATTACK ;if the wait period has not yet passed...
+JL :SetGravity ;...then skip this section
+;;; section 2 - checks distance to see if NPC should be put in its attack state ;;;
 MOV EDX, NPC.X
-SUB EDX, 0C000
-CMP EDX, PlayerXPos
-JGE :SetGravity 
+SUB EDX, HORIZONTAL_DISTANCE_CHECK_ATTACK
+CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player
+JGE :SetGravity ;if it is, then skip this section
 MOV EDX, NPC.X
-ADD EDX, 0C000
-CMP EDX, PlayerXPos
-JLE :SetGravity 
-;check if the NPC Y position is far from the player (close test)
+ADD EDX, HORIZONTAL_DISTANCE_CHECK_ATTACK
+CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player (from the other direction this time)
+JLE :SetGravity ;if it is, then skip this section
 MOV EDX, NPC.Y
-SUB EDX, 0C000
-CMP EDX, PlayerYPos
-JGE :SetGravity 
+SUB EDX, UP_DISTANCE_CHECK_ATTACK
+CMP EDX, PlayerYPos ;check if the NPC Y position is far away from the player
+JGE :SetGravity ;if it is, then skip to the next section
 MOV EDX, NPC.Y
-ADD EDX, 6000
-CMP EDX, PlayerYPos
-JLE :SetGravity 
-MOV NPC.ScriptState, 2
+ADD EDX, DOWN_DISTANCE_CHECK_ATTACK
+CMP EDX, PlayerYPos ;check if the NPC Y position is far away from the player (from the other direction this time)
+JLE :SetGravity ;if it is, then skip to the next section
+MOV NPC.ScriptState, 2 ;if we haven't done a jump from the distance checks, then the player is close to the NPC and should be set up to go to its attack state
 MOV NPC.FrameNum, 0
 MOV NPC.ScriptTimer, 0
 JMP :SetGravity
