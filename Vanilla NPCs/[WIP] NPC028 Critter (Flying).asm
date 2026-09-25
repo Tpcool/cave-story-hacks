@@ -21,6 +21,8 @@ DOWN_DISTANCE_CHECK_ATTACK = 6000
 WAIT_BEFORE_ALERT = 8 ;how long the NPC will wait before it checks to see if it should change its frame to its alert appearance
 WAIT_BEFORE_ATTACK = 8 ;how long the NPC will wait before it checks to see if it should attack or not
 
+HORIZONTAL_LEAP_DISTANCE = 100 ;upon jumping, how far the NPC will go left/right
+
 #ENDDEFINE
 
 ENTER 0, 0
@@ -132,11 +134,11 @@ MOV NPC.Direction, 2
 :CheckDirectionForState2
 CMP NPC.Direction, 0 ;using the direction that was just set, set the X velocity in that direction
 JNE :SetRightXVelocityForState2
-MOV NPC.MoveX, -100
+MOV NPC.MoveX, -HORIZONTAL_LEAP_DISTANCE
 JMP :SetGravity
 
 :SetRightXVelocityForState2
-MOV NPC.MoveX, 100
+MOV NPC.MoveX, HORIZONTAL_LEAP_DISTANCE
 JMP :SetGravity
 
 :State3
@@ -149,10 +151,9 @@ MOV NPC.FrameNum, 3
 MOV NPC.ScriptTimer, 0
 JMP :SetGravity
 
-;start of flight state
 :State4
 MOV EDX, NPC.X
-CMP EDX, PlayerXPos
+CMP EDX, PlayerXPos ;set the direction towards the player
 JGE :SetDirectionLeftForState4
 MOV NPC.Direction, 2
 JMP :IncrementAndCheckScriptTimer
@@ -162,21 +163,19 @@ MOV NPC.Direction, 0
 
 :IncrementAndCheckScriptTimer
 INC NPC.ScriptTimer
-;check if collision with left wall, right wall, ceiling
-AND NPC.Collision, 00000007
-JNE :SetState5ForState4
-CMP NPC.ScriptTimer, 64
-JLE :CalculateWeirdScriptTimerThing
+AND NPC.Collision, 00000007 ;if the NPC has made contact with the wall or ceiling...
+JNE :SetState5ForState4 ;...then end the current state and set up for the falling sequence
+CMP NPC.ScriptTimer, 64 ;if enough frames have not elapsed...
+JLE :CalculateWeirdScriptTimerThing ;...then continue in this state and do not activate the falling sequence yet
 
 :SetState5ForState4
-MOV NPC.Damage, 3
+MOV NPC.Damage, 3 ;set up the falling state
 MOV NPC.ScriptState, 5
 MOV NPC.FrameNum, 2
-;research says: this will divide the X velocity by 2 and save it as the new velocity
 MOV EAX, NPC.MoveX
-CDQ
-SUB EAX, EDX
-SAR EAX, 1
+CDQ ;set EDX to 0 if the velocity is positive, 1 if it's negative
+SUB EAX, EDX ;add 1 to the velocity if it's negative, do nothing if it's positive
+SAR EAX, 1 ;divide velocity by 2 (the previous operations made it possible to divide cleanly even with a negative velocity)
 MOV NPC.MoveX, EAX
 JMP :SetGravity 
 
