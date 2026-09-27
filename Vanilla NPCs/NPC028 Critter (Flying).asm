@@ -26,8 +26,12 @@ HORIZONTAL_LEAP_DISTANCE = 100 ;upon jumping, how far the NPC will go left/right
 FLIGHT_TIME = 64 ;how many frames the NPC should be in flight before falling down
 
 MAX_FALL_SPEED = 5FF ;max possible falling velocity
-
 GRAVITY = 40 ;how much the NPC will be pulled back down to the ground every frame
+
+X_VELOCITY_SCALE = 20 ;how much the horizontal movement will increase every frame during flight
+Y_VELOCITY_SCALE = 10 ;how much the vertical movement will increase every frame during flight
+X_VELOCITY_CAP = 200 ;max horizontal speed during flight
+Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 
 #ENDDEFINE
 
@@ -225,19 +229,19 @@ ADD ESP, 8
 SETPOINTER
 
 :SetGravity
-CMP NPC.ScriptState, 4 
-JE :CheckXVelocity
+CMP NPC.ScriptState, 4 ;if the NPC is in the flight state...
+JE :CheckXVelocity ;...then jump to its unique gravity section
 ADD NPC.MoveY, GRAVITY ;add to the Y velocity to simulate gravity pulling down
-CMP NPC.MoveY, MAX_FALL_SPEED ;cap falling speed
-JLE :AddVelocitiesToPositions
+CMP NPC.MoveY, MAX_FALL_SPEED ;if the current Y velocity is NOT greater than the set cap...
+JLE :AddVelocitiesToPositions ;...then jump to the next section
 MOV NPC.MoveY, MAX_FALL_SPEED ;otherwise, cap the falling speed
 JMP :AddVelocitiesToPositions
 
 :CheckXVelocity
 MOV EDX, NPC.X
-CMP EDX, PlayerXPos
-JGE :DecreaseXVelocity
-ADD NPC.MoveX, 20
+CMP EDX, PlayerXPos ;if the NPC is to the right of the player...
+JGE :DecreaseXVelocity ;...then add a negative X velocity to have the NPC go in the player's direction
+ADD NPC.MoveX, 20 ;otherwise, add positive X velocity
 JMP :CheckYVelocity
 
 :DecreaseXVelocity
@@ -245,39 +249,39 @@ SUB NPC.MoveX, 20
 
 :CheckYVelocity
 MOV EDX, NPC.Y
-CMP EDX, NPC.Directive
-JLE :IncreaseYVelocity
-SUB NPC.MoveY, 10
+CMP EDX, NPC.Directive ;if the NPC's current Y position is less than its original Y position when it started its flight state...
+JLE :IncreaseYVelocity ;...then increase the Y velocity to ascend
+SUB NPC.MoveY, 10 ;otherwise, decrease the Y velocity to descend
 JMP :CapPositiveYVelocity
 
 :IncreaseYVelocity
 ADD NPC.MoveY, 10
 
 :CapPositiveYVelocity
-CMP NPC.MoveY, 200
-JLE :CapNegativeYVelocity
-MOV NPC.MoveY, 200
+CMP NPC.MoveY, Y_VELOCITY_CAP ;if the Y velocity is NOT too high...
+JLE :CapNegativeYVelocity ;...then skip to the next section
+MOV NPC.MoveY, Y_VELOCITY_CAP ;otherwise, cap the Y velocity
 
 :CapNegativeYVelocity
-CMP NPC.MoveY, -200
-JGE :CapPositiveXVelocity
-MOV NPC.MoveY, -200
+CMP NPC.MoveY, -Y_VELOCITY_CAP ;if the Y velocity is NOT too low...
+JGE :CapPositiveXVelocity ;...then skip to the next section
+MOV NPC.MoveY, -Y_VELOCITY_CAP ;otherwise, cap the Y velocity
 
 :CapPositiveXVelocity
-CMP NPC.MoveX, 200
-JLE :CapNegativeXVelocity
-MOV NPC.MoveX, 200
+CMP NPC.MoveX, X_VELOCITY_CAP ;if the X velocity is NOT too high...
+JLE :CapNegativeXVelocity ;...then skip to the next section
+MOV NPC.MoveX, X_VELOCITY_CAP ;otherwise, cap the X velocity
 
 :CapNegativeXVelocity
-CMP NPC.MoveX, -200
-JGE :AddVelocitiesToPositions
-MOV NPC.MoveX, -200
+CMP NPC.MoveX, -X_VELOCITY_CAP ;if the X velocity is NOT too low...
+JGE :AddVelocitiesToPositions ;...then skip to the next section
+MOV NPC.MoveX, -X_VELOCITY_CAP ;otherwise, cap the X velocity
 
 :AddVelocitiesToPositions
 MOV EDX, NPC.MoveX
-ADD NPC.X, EDX
+ADD NPC.X, EDX ;add the pre-calculated X velocity to the NPC's X position
 MOV EDX, NPC.MoveY
-ADD NPC.Y, EDX
+ADD NPC.Y, EDX ;add the pre-calculated Y velocity to the NPC's Y position
 
 :Render
 MOV EDX, NPC.FrameNum ;store the framenum
