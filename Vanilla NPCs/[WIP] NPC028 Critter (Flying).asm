@@ -3,7 +3,7 @@ OFFSET NPC028 ;42BAE0
 ; State 1: NPC is idle. tests how close the player is. if the player is close, NPC will begin to jump
 ; State 2: jump startup. wait some frames while idle, then sets the initial jump velocity
 ; State 3: jump sequence. NPC will jump until its velocity reaches a certain point, and then transition into its flight state
-; State 4: 
+; State 4: flying sequence. plays sfx and cycles through flying frames. ends after collision or enough time, and sets up for landing
 ; State 5: landing sequence. the gravity code will keep running until the NPC hits the ground, at which point it will go back to the idle state
 
 #DEFINE
@@ -23,7 +23,11 @@ WAIT_BEFORE_ATTACK = 8 ;how long the NPC will wait before it checks to see if it
 
 HORIZONTAL_LEAP_DISTANCE = 100 ;upon jumping, how far the NPC will go left/right
 
-FLIGHT_TIME = 100;64 ;how many frames the NPC should be in flight before falling down
+FLIGHT_TIME = 64 ;how many frames the NPC should be in flight before falling down
+
+MAX_FALL_SPEED = 5FF ;max possible falling velocity
+
+GRAVITY = 40 ;how much the NPC will be pulled back down to the ground every frame
 
 #ENDDEFINE
 
@@ -156,11 +160,11 @@ JMP :SetGravity
 :State4
 MOV EDX, NPC.X
 CMP EDX, PlayerXPos ;set the direction towards the player
-JGE :SetDirectionLeftForState4
+JGE :SetDirectionForState4
 MOV NPC.Direction, 2
 JMP :IncrementAndCheckScriptTimer
 
-:SetDirectionLeftForState4
+:SetDirectionForState4
 MOV NPC.Direction, 0
 
 :IncrementAndCheckScriptTimer
@@ -205,7 +209,6 @@ JLE :SetGravity ;...then skip the remaining state code
 MOV NPC.FrameNum, 3 ;otherwise, reset the framenum back to the first flying frame in the cycle
 JMP :SetGravity
 
-;landing after flying state
 :State5
 MOV EDX, NPC.Collision
 AND EDX, 00000008 ;if the NPC is not colliding with the floor...
@@ -224,10 +227,10 @@ SETPOINTER
 :SetGravity
 CMP NPC.ScriptState, 4 
 JE :CheckXVelocity
-ADD NPC.MoveY, 40 ;add to the Y velocity to simulate gravity pulling down
-CMP NPC.MoveY, 5FF ;cap falling speed
+ADD NPC.MoveY, GRAVITY ;add to the Y velocity to simulate gravity pulling down
+CMP NPC.MoveY, MAX_FALL_SPEED ;cap falling speed
 JLE :AddVelocitiesToPositions
-MOV NPC.MoveY, 5FF
+MOV NPC.MoveY, MAX_FALL_SPEED ;otherwise, cap the falling speed
 JMP :AddVelocitiesToPositions
 
 :CheckXVelocity
