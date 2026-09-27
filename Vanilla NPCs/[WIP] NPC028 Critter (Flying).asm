@@ -23,6 +23,8 @@ WAIT_BEFORE_ATTACK = 8 ;how long the NPC will wait before it checks to see if it
 
 HORIZONTAL_LEAP_DISTANCE = 100 ;upon jumping, how far the NPC will go left/right
 
+FLIGHT_TIME = 100;64 ;how many frames the NPC should be in flight before falling down
+
 #ENDDEFINE
 
 ENTER 0, 0
@@ -165,8 +167,8 @@ MOV NPC.Direction, 0
 INC NPC.ScriptTimer
 AND NPC.Collision, 00000007 ;if the NPC has made contact with the wall or ceiling...
 JNE :SetState5ForState4 ;...then end the current state and set up for the falling sequence
-CMP NPC.ScriptTimer, 64 ;if enough frames have not elapsed...
-JLE :CalculateWeirdScriptTimerThing ;...then continue in this state and do not activate the falling sequence yet
+CMP NPC.ScriptTimer, FLIGHT_TIME ;if enough frames have not elapsed...
+JLE :CheckScriptTimerForFlightSound ;...then continue in this state and do not activate the falling sequence yet
 
 :SetState5ForState4
 MOV NPC.Damage, 3 ;set up the falling state
@@ -179,46 +181,28 @@ SAR EAX, 1 ;divide velocity by 2 (the previous operations made it possible to di
 MOV NPC.MoveX, EAX
 JMP :SetGravity 
 
-:CalculateWeirdScriptTimerThing
-;research says: this is checking if the scripttimer is negative? does weird stuff with EDX?
-MOV EDX, NPC.ScriptTimer
-AND EDX, 80000003
-JNS :CheckWeirdScriptTimerThing 
-;no clue... TBD. it's doing even more stuff with the already weird value
-DEC EDX
-OR EDX, FFFFFFFC
-INC EDX
-
-:CheckWeirdScriptTimerThing
-CMP EDX, 1
-JNE :CheckCollisionForState4
-;play critter fly sfx
-PUSH 1 
+:CheckScriptTimerForFlightSound
+MOV EDX, NPC.ScriptTimer ;the following section will play the critter flying sound effect every few frames
+AND EDX, 00000003 ;reduce the scripttimer to a multiple of the given number
+CMP EDX, 1 ;if it is NOT reduced down to 1...
+JNE :CheckCollisionForState4 ;...then jump to the next section
+PUSH 1 ;otherwise, play the critter flying sound effect
 PUSH 6D 
 CALL PlaySound 
 ADD ESP, 8
 SETPOINTER
 
 :CheckCollisionForState4
-;check if the NPC is... NOT colliding with the floor
 MOV EDX, NPC.Collision
-AND EDX, 00000008
-JE :ResetAndIncrementFrameTimer
-MOV NPC.MoveY, -200
-
-:ResetAndIncrementFrameTimer
-INC NPC.FrameTimer
-CMP NPC.FrameTimer, 0
-JLE :CheckFlyingFrame
-MOV NPC.FrameTimer, 0
-INC NPC.FrameNum
+AND EDX, 00000008 ;if the NPC is NOT colliding with the floor...
+JE :CheckFlyingFrame ;...then jump to the next section
+MOV NPC.MoveY, -200 ;otherwise, push the NPC away from the ground. however, i wasn't able to get this interaction to trigger, so it may not be necessary.
 
 :CheckFlyingFrame
-;check if the framenum is less than or equal to 5
-CMP NPC.FrameNum, 5
-JLE :SetGravity
-;set the framenum to 3 (in an effort to cycle through the frames of flying)
-MOV NPC.FrameNum, 3
+INC NPC.FrameNum
+CMP NPC.FrameNum, 5 ;if the NPC has NOT reached the final flying frame in the cycle...
+JLE :SetGravity ;...then skip the remaining state code
+MOV NPC.FrameNum, 3 ;otherwise, reset the framenum back to the first flying frame in the cycle
 JMP :SetGravity
 
 ;landing after flying state
