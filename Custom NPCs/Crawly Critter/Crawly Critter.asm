@@ -5,6 +5,8 @@ OFFSET NPC028 ;42BAE0
 ; State 3: jump sequence. NPC will jump until its velocity reaches a certain point, and then transition into its flight state
 ; State 4: flying sequence. plays sfx and cycles through flying frames. ends after collision or enough time, and sets up for landing
 ; State 5: landing sequence. the gravity code will keep running until the NPC hits the ground, at which point it will go back to the idle state
+; State 6: 
+; State 7: 
 
 #DEFINE
 
@@ -39,14 +41,14 @@ ENTER 0, 0
 SETPOINTER
 
 :FindState
-CMP NPC.ScriptState, 5
+CMP NPC.ScriptState, 7
 JG :SetGravity
 MOV EDX, NPC.ScriptState
 JMP [EDX*4+:StateTable]
 
 :State0
 ADD NPC.Y, 600
-MOV NPC.ScriptState, 1
+MOV NPC.ScriptState, 6
 
 :State1
 ;;; section 1 - checks distance to see if NPC should be put in its alert frame ;;;
@@ -228,6 +230,62 @@ CALL PlaySound ;hit the ground sound effect
 ADD ESP, 8
 SETPOINTER
 
+:State6
+MOV EDX, NPC.Collision
+AND EDX, 00000008 ;if the NPC is NOT colliding with the floor...
+JE :SetGravity ;...then keep the gravity in effect
+MOV NPC.ScriptState, 7 ;otherwise, set up the next state
+MOV NPC.FrameTimer, 0
+MOV NPC.Direction, 0
+JMP :SetGravity
+
+:State7
+CMP NPC.Direction, 0
+JE :GoLeft
+ADD NPC.X, 100
+ADD NPC.Y, 10
+JMP :CheckNextCollision
+
+:GoLeft
+SUB NPC.X, 100
+ADD NPC.Y, 10
+
+:CheckNextCollision
+MOV EDX, NPC.X
+PUSH EDX ;store the NPC X position before it's used in the function call
+SUB NPC.X, 88000 ;offset the NPC X position for the test so the NPC can make its move before it's completely off of the platform
+PUSH ECX ;with the pointer to the NPC...
+CALL EntityCollis ;set the NPC collision using the temporary position
+ADD ESP, 4
+SETPOINTER
+MOV EDX, NPC.Collision
+TEST EDX, 00000008 ;compare the results of the collision test
+POP EDX ;return the original NPC X position
+MOV NPC.X, EDX
+JE :State7SetDirection ;if the NPC would NOT be colliding with the floor based on the flag set from the prior TEST command, change its movement
+JMP :State7CheckFrame
+
+:State7SetDirection
+MOV NPC.Direction, 2
+JMP :State7CheckFrame
+
+:State7CheckFrame
+INC NPC.FrameTimer
+CMP NPC.FrameTimer, 8
+JE :State7SetFrame1
+CMP NPC.FrameTimer, F
+JE :State7SetFrame2
+JMP :Render
+
+:State7SetFrame1
+MOV NPC.FrameNum, 1
+JMP :Render
+
+:State7SetFrame2
+MOV NPC.FrameNum, 0
+MOV NPC.FrameTimer, 0
+JMP :Render
+
 :SetGravity
 CMP NPC.ScriptState, 4 ;if the NPC is in the flight state...
 JE :CheckXVelocity ;...then jump to its unique gravity section
@@ -307,3 +365,5 @@ print :State2
 print :State3
 print :State4
 print :State5
+print :State6
+print :State7
