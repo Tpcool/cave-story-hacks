@@ -6,7 +6,10 @@ OFFSET NPC028 ;42BAE0
 ; State 4: flying sequence. plays sfx and cycles through flying frames. ends after collision or enough time, and sets up for landing
 ; State 5: landing sequence. the gravity code will keep running until the NPC hits the ground, at which point it will go back to the idle state
 ; State 6: 
-; State 7: 
+; State 7: On ground
+; State 8: On left wall
+; State 9: On ceiling
+; State A: On right wall
 
 #DEFINE
 
@@ -35,13 +38,16 @@ Y_VELOCITY_SCALE = 10 ;how much the vertical movement will increase every frame 
 X_VELOCITY_CAP = 200 ;max horizontal speed during flight
 Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 
+CRAWL_SPEED = 20
+CRAWL_GRAVITY = 200
+
 #ENDDEFINE
 
 ENTER 0, 0
 SETPOINTER
 
 :FindState
-CMP NPC.ScriptState, 7
+CMP NPC.ScriptState, A
 JG :SetGravity
 MOV EDX, NPC.ScriptState
 JMP [EDX*4+:StateTable]
@@ -239,49 +245,108 @@ MOV NPC.FrameTimer, 0
 MOV NPC.Direction, 0
 JMP :SetGravity
 
+;42BAE0
 :State7
-CMP NPC.Direction, 0
-JE :GoLeft
-ADD NPC.X, 100
-ADD NPC.Y, 10
-JMP :CheckNextCollision
-
-:GoLeft
-SUB NPC.X, 100
-ADD NPC.Y, 10
-
-:CheckNextCollision
-MOV EDX, NPC.X
-PUSH EDX ;store the NPC X position before it's used in the function call
-SUB NPC.X, 88000 ;offset the NPC X position for the test so the NPC can make its move before it's completely off of the platform
-PUSH ECX ;with the pointer to the NPC...
-CALL EntityCollis ;set the NPC collision using the temporary position
-ADD ESP, 4
-SETPOINTER
 MOV EDX, NPC.Collision
-TEST EDX, 00000008 ;compare the results of the collision test
-POP EDX ;return the original NPC X position
-MOV NPC.X, EDX
-JE :State7SetDirection ;if the NPC would NOT be colliding with the floor based on the flag set from the prior TEST command, change its movement
-JMP :State7CheckFrame
+TEST EDX, 00000008 ;if NOT making contact with floor...
+JE :State7OffPlatform ;change its movement
+JMP :State7Movement
 
-:State7SetDirection
-MOV NPC.Direction, 2
-JMP :State7CheckFrame
+:State7OffPlatform
+MOV NPC.ScriptState, 8
+JMP :State8Movement
 
-:State7CheckFrame
+:State7Movement
+CMP NPC.Direction, 0
+JE :State7MovementLeft
+ADD NPC.X, CRAWL_SPEED
+ADD NPC.Y, CRAWL_GRAVITY
+JMP :SetCrawlFrame
+
+:State7MovementLeft
+SUB NPC.X, CRAWL_SPEED
+ADD NPC.Y, CRAWL_GRAVITY
+JMP :SetCrawlFrame
+
+:State8
+MOV EDX, NPC.Collision
+TEST EDX, 00000001 ;if NOT making contact with wall...
+JE :State8OffPlatform ;change its movement
+JMP :State8Movement
+
+:State8OffPlatform
+MOV NPC.ScriptState, 9
+JMP :State9Movement
+
+:State8Movement
+CMP NPC.Direction, 0
+JE :State8MovementLeft
+ADD NPC.X, CRAWL_GRAVITY
+ADD NPC.Y, CRAWL_SPEED
+JMP :SetCrawlFrame
+
+:State8MovementLeft
+ADD NPC.X, CRAWL_GRAVITY
+SUB NPC.Y, CRAWL_SPEED
+JMP :SetCrawlFrame
+
+:State9
+MOV EDX, NPC.Collision
+TEST EDX, 00000002 ;if NOT making contact with ceiling...
+JE :State9OffPlatform ;change its movement
+JMP :State9Movement
+
+:State9OffPlatform
+MOV NPC.ScriptState, A
+JMP :StateAMovement
+
+:State9Movement
+CMP NPC.Direction, 0
+JE :State9MovementLeft
+ADD NPC.X, CRAWL_SPEED
+SUB NPC.Y, CRAWL_GRAVITY
+JMP :SetCrawlFrame
+
+:State9MovementLeft
+SUB NPC.X, CRAWL_SPEED
+SUB NPC.Y, CRAWL_GRAVITY
+JMP :SetCrawlFrame
+
+:StateA
+MOV EDX, NPC.Collision
+TEST EDX, 00000004 ;if NOT making contact with floor...
+JE :StateAOffPlatform ;change its movement
+JMP :StateAMovement
+
+:StateAOffPlatform
+MOV NPC.ScriptState, 7
+JMP :State7Movement
+
+:StateAMovement
+CMP NPC.Direction, 0
+JE :StateAMovementLeft
+SUB NPC.X, 80
+SUB NPC.Y, CRAWL_SPEED
+JMP :SetCrawlFrame
+
+:StateAMovementLeft
+SUB NPC.X, 80
+ADD NPC.Y, CRAWL_SPEED
+JMP :SetCrawlFrame
+
+:SetCrawlFrame
 INC NPC.FrameTimer
 CMP NPC.FrameTimer, 8
-JE :State7SetFrame1
+JE :SetCrawlFrame1
 CMP NPC.FrameTimer, F
-JE :State7SetFrame2
+JE :SetCrawlFrame2
 JMP :Render
 
-:State7SetFrame1
+:SetCrawlFrame1
 MOV NPC.FrameNum, 1
 JMP :Render
 
-:State7SetFrame2
+:SetCrawlFrame2
 MOV NPC.FrameNum, 0
 MOV NPC.FrameTimer, 0
 JMP :Render
@@ -350,6 +415,14 @@ MOV NPC.DisplayR, EDX ;render right display rect
 MOV EDX, NPC.Direction ;store the direction of the NPC
 SHL EDX, 3 ;multiply direction by 8 to dynamically locate left/right facing sprites
 ADD EDX, 30 ;sprite for NPC begins at 48d Y position
+MOV EAX, NPC.ScriptState
+CMP EAX, 7
+JL :RenderUpDown
+SUB EAX, 7
+SHL EAX, 4
+ADD EDX, EAX
+
+:RenderUpDown
 MOV NPC.DisplayU, EDX ;render up display rect
 ADD EDX, 10 ;shift position from top of the sprite to bottom
 MOV NPC.DisplayD, EDX ;render down display rect
@@ -367,3 +440,6 @@ print :State4
 print :State5
 print :State6
 print :State7
+print :State8
+print :State9
+print :StateA
