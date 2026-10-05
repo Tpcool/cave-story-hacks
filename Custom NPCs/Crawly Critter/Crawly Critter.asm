@@ -38,8 +38,8 @@ Y_VELOCITY_SCALE = 10 ;how much the vertical movement will increase every frame 
 X_VELOCITY_CAP = 200 ;max horizontal speed during flight
 Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 
-CRAWL_SPEED = 20
-CRAWL_GRAVITY = 200
+CRAWL_SPEED = 80
+CRAWL_GRAVITY = 600
 
 #ENDDEFINE
 
@@ -254,6 +254,7 @@ JMP :State7Movement
 
 :State7OffPlatform
 MOV NPC.ScriptState, 8
+ADD NPC.Y, 600
 JMP :State8Movement
 
 :State7Movement
@@ -270,24 +271,25 @@ JMP :SetCrawlFrame
 
 :State8
 MOV EDX, NPC.Collision
-TEST EDX, 00000001 ;if NOT making contact with wall...
+TEST EDX, 00000004 ;if NOT making contact with wall...
 JE :State8OffPlatform ;change its movement
 JMP :State8Movement
 
 :State8OffPlatform
 MOV NPC.ScriptState, 9
+ADD NPC.X, 1000
 JMP :State9Movement
 
 :State8Movement
 CMP NPC.Direction, 0
 JE :State8MovementLeft
 ADD NPC.X, CRAWL_GRAVITY
-ADD NPC.Y, CRAWL_SPEED
+SUB NPC.Y, CRAWL_SPEED
 JMP :SetCrawlFrame
 
 :State8MovementLeft
 ADD NPC.X, CRAWL_GRAVITY
-SUB NPC.Y, CRAWL_SPEED
+ADD NPC.Y, CRAWL_SPEED
 JMP :SetCrawlFrame
 
 :State9
@@ -298,40 +300,42 @@ JMP :State9Movement
 
 :State9OffPlatform
 MOV NPC.ScriptState, A
+SUB NPC.Y, 600
 JMP :StateAMovement
 
 :State9Movement
 CMP NPC.Direction, 0
 JE :State9MovementLeft
-ADD NPC.X, CRAWL_SPEED
+SUB NPC.X, CRAWL_SPEED
 SUB NPC.Y, CRAWL_GRAVITY
 JMP :SetCrawlFrame
 
 :State9MovementLeft
-SUB NPC.X, CRAWL_SPEED
+ADD NPC.X, CRAWL_SPEED
 SUB NPC.Y, CRAWL_GRAVITY
 JMP :SetCrawlFrame
 
 :StateA
 MOV EDX, NPC.Collision
-TEST EDX, 00000004 ;if NOT making contact with floor...
+TEST EDX, 00000001 ;if NOT making contact with floor...
 JE :StateAOffPlatform ;change its movement
 JMP :StateAMovement
 
 :StateAOffPlatform
 MOV NPC.ScriptState, 7
+SUB NPC.X, 1000
 JMP :State7Movement
 
 :StateAMovement
 CMP NPC.Direction, 0
 JE :StateAMovementLeft
-SUB NPC.X, 80
-SUB NPC.Y, CRAWL_SPEED
+SUB NPC.X, CRAWL_GRAVITY
+ADD NPC.Y, CRAWL_SPEED
 JMP :SetCrawlFrame
 
 :StateAMovementLeft
-SUB NPC.X, 80
-ADD NPC.Y, CRAWL_SPEED
+SUB NPC.X, CRAWL_GRAVITY
+SUB NPC.Y, CRAWL_SPEED
 JMP :SetCrawlFrame
 
 :SetCrawlFrame
@@ -419,7 +423,7 @@ MOV EAX, NPC.ScriptState
 CMP EAX, 7
 JL :RenderUpDown
 SUB EAX, 7
-SHL EAX, 4
+SHL EAX, 5
 ADD EDX, EAX
 
 :RenderUpDown
