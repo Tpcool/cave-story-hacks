@@ -38,8 +38,8 @@ Y_VELOCITY_SCALE = 10 ;how much the vertical movement will increase every frame 
 X_VELOCITY_CAP = 200 ;max horizontal speed during flight
 Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 
-CRAWL_SPEED = 80
-CRAWL_GRAVITY = 600
+CRAWL_SPEED = B0
+CRAWL_GRAVITY = 400
 
 #ENDDEFINE
 
@@ -277,7 +277,7 @@ JMP :State8Movement
 
 :State8OffPlatform
 MOV NPC.ScriptState, 9
-ADD NPC.X, 1000
+ADD NPC.X, C00
 JMP :State9Movement
 
 :State8Movement
@@ -323,7 +323,7 @@ JMP :StateAMovement
 
 :StateAOffPlatform
 MOV NPC.ScriptState, 7
-SUB NPC.X, 1000
+SUB NPC.X, C00
 JMP :State7Movement
 
 :StateAMovement
