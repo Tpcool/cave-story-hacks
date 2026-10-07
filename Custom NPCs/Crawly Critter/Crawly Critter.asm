@@ -41,6 +41,9 @@ Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 CRAWL_SPEED = B0
 CRAWL_GRAVITY = 400
 
+OFF_PLATFORM_ADJUST_X = C00
+OFF_PLATFORM_ADJUST_Y = 600
+
 #ENDDEFINE
 
 ENTER 0, 0
@@ -242,20 +245,17 @@ AND EDX, 00000008 ;if the NPC is NOT colliding with the floor...
 JE :SetGravity ;...then keep the gravity in effect
 MOV NPC.ScriptState, 7 ;otherwise, set up the next state
 MOV NPC.FrameTimer, 0
-MOV NPC.Direction, 0
 JMP :SetGravity
 
 ;42BAE0
 :State7
 MOV EDX, NPC.Collision
+TEST EDX, 00000001 ;if making contact with the wall from the left...
+JNE :State7ContactLeft
+TEST EDX, 00000004 ;if making contact with wall from the right...
+JNE :State7ContactRight
 TEST EDX, 00000008 ;if NOT making contact with floor...
-JE :State7OffPlatform ;change its movement
-JMP :State7Movement
-
-:State7OffPlatform
-MOV NPC.ScriptState, 8
-ADD NPC.Y, 600
-JMP :State8Movement
+JE :State7OffPlatform
 
 :State7Movement
 CMP NPC.Direction, 0
@@ -269,16 +269,34 @@ SUB NPC.X, CRAWL_SPEED
 ADD NPC.Y, CRAWL_GRAVITY
 JMP :SetCrawlFrame
 
-:State8
-MOV EDX, NPC.Collision
-TEST EDX, 00000004 ;if NOT making contact with wall...
-JE :State8OffPlatform ;change its movement
+:State7ContactLeft
+MOV NPC.ScriptState, A
+JMP :StateAMovement
+
+:State7ContactRight
+MOV NPC.ScriptState, 8
 JMP :State8Movement
 
-:State8OffPlatform
-MOV NPC.ScriptState, 9
-ADD NPC.X, C00
-JMP :State9Movement
+:State7OffPlatform
+ADD NPC.Y, OFF_PLATFORM_ADJUST_Y
+MOV EDX, NPC.Direction
+CMP EDX, 0
+JE :State7OffPlatformLeft
+MOV NPC.ScriptState, A
+JMP :StateAMovement
+
+:State7OffPlatformLeft
+MOV NPC.ScriptState, 8
+JMP :State8Movement
+
+:State8
+MOV EDX, NPC.Collision
+TEST EDX, 00000008 ;if making contact with the floor...
+JNE :State8ContactLeft
+TEST EDX, 00000002 ;if making contact with the ceiling...
+JNE :State8ContactRight
+TEST EDX, 00000004 ;if NOT making contact with wall from the right...
+JE :State8OffPlatform ;change its movement
 
 :State8Movement
 CMP NPC.Direction, 0
@@ -292,16 +310,34 @@ ADD NPC.X, CRAWL_GRAVITY
 ADD NPC.Y, CRAWL_SPEED
 JMP :SetCrawlFrame
 
-:State9
-MOV EDX, NPC.Collision
-TEST EDX, 00000002 ;if NOT making contact with ceiling...
-JE :State9OffPlatform ;change its movement
+:State8ContactLeft
+MOV NPC.ScriptState, 7
+JMP :State7Movement
+
+:State8ContactRight
+MOV NPC.ScriptState, 9
 JMP :State9Movement
 
-:State9OffPlatform
-MOV NPC.ScriptState, A
-SUB NPC.Y, 600
-JMP :StateAMovement
+:State8OffPlatform
+ADD NPC.X, OFF_PLATFORM_ADJUST_X
+MOV EDX, NPC.Direction
+CMP EDX, 0
+JE :State8OffPlatformLeft
+MOV NPC.ScriptState, 7
+JMP :State7Movement
+
+:State8OffPlatformLeft
+MOV NPC.ScriptState, 9
+JMP :State9Movement
+
+:State9
+MOV EDX, NPC.Collision
+TEST EDX, 00000004 ;if making contact with the wall from the right...
+JNE :State9ContactLeft
+TEST EDX, 00000001 ;if making contact with the wall from the left...
+JNE :State9ContactRight
+TEST EDX, 00000002 ;if NOT making contact with ceiling...
+JE :State9OffPlatform ;change its movement
 
 :State9Movement
 CMP NPC.Direction, 0
@@ -315,16 +351,34 @@ ADD NPC.X, CRAWL_SPEED
 SUB NPC.Y, CRAWL_GRAVITY
 JMP :SetCrawlFrame
 
-:StateA
-MOV EDX, NPC.Collision
-TEST EDX, 00000001 ;if NOT making contact with floor...
-JE :StateAOffPlatform ;change its movement
+:State9ContactLeft
+MOV NPC.ScriptState, 8
+JMP :State8Movement
+
+:State9ContactRight
+MOV NPC.ScriptState, A
 JMP :StateAMovement
 
-:StateAOffPlatform
-MOV NPC.ScriptState, 7
-SUB NPC.X, C00
-JMP :State7Movement
+:State9OffPlatform
+SUB NPC.Y, OFF_PLATFORM_ADJUST_Y
+MOV EDX, NPC.Direction
+CMP EDX, 0
+JE :State9OffPlatformLeft
+MOV NPC.ScriptState, 8
+JMP :State8Movement
+
+:State9OffPlatformLeft
+MOV NPC.ScriptState, A
+JMP :StateAMovement
+
+:StateA
+MOV EDX, NPC.Collision
+TEST EDX, 00000002 ;if making contact with the ceiling...
+JNE :StateAContactLeft
+TEST EDX, 00000008 ;if making contact with the floor...
+JNE :StateAContactRight
+TEST EDX, 00000001 ;if NOT making contact with wall...
+JE :StateAOffPlatform
 
 :StateAMovement
 CMP NPC.Direction, 0
@@ -337,6 +391,26 @@ JMP :SetCrawlFrame
 SUB NPC.X, CRAWL_GRAVITY
 SUB NPC.Y, CRAWL_SPEED
 JMP :SetCrawlFrame
+
+:StateAContactLeft
+MOV NPC.ScriptState, 9
+JMP :State9Movement
+
+:StateAContactRight
+MOV NPC.ScriptState, 7
+JMP :State7Movement
+
+:StateAOffPlatform
+SUB NPC.X, OFF_PLATFORM_ADJUST_X
+MOV EDX, NPC.Direction
+CMP EDX, 0
+JE :StateAOffPlatformLeft
+MOV NPC.ScriptState, 9
+JMP :State9Movement
+
+:StateAOffPlatformLeft
+MOV NPC.ScriptState, 7
+JMP :State7Movement
 
 :SetCrawlFrame
 INC NPC.FrameTimer
