@@ -41,7 +41,7 @@ Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 CRAWL_SPEED = B0
 CRAWL_GRAVITY = 400
 
-OFF_PLATFORM_ADJUST_X = C00
+OFF_PLATFORM_ADJUST_X = 600;C00
 OFF_PLATFORM_ADJUST_Y = 600
 
 #ENDDEFINE
@@ -245,17 +245,18 @@ AND EDX, 00000008 ;if the NPC is NOT colliding with the floor...
 JE :SetGravity ;...then keep the gravity in effect
 MOV NPC.ScriptState, 7 ;otherwise, set up the next state
 MOV NPC.FrameTimer, 0
+MOV NPC.ScriptTimer, 0
 JMP :SetGravity
 
 ;42BAE0
 :State7
 MOV EDX, NPC.Collision
+TEST EDX, 00000008 ;if NOT making contact with floor...
+JE :State7OffPlatform
 TEST EDX, 00000001 ;if making contact with the wall from the left...
 JNE :State7ContactLeft
 TEST EDX, 00000004 ;if making contact with wall from the right...
 JNE :State7ContactRight
-TEST EDX, 00000008 ;if NOT making contact with floor...
-JE :State7OffPlatform
 
 :State7Movement
 CMP NPC.Direction, 0
@@ -278,7 +279,18 @@ MOV NPC.ScriptState, 8
 JMP :State8Movement
 
 :State7OffPlatform
+MOV EDX, NPC.Collision
+TEST EDX, 0000000F
+JNE :State7MoveOffPlatform
 ADD NPC.Y, OFF_PLATFORM_ADJUST_Y
+INC NPC.ScriptTimer
+CMP NPC.ScriptTimer, 2
+JE :FallenOff
+JMP :SetCrawlFrame
+
+:State7MoveOffPlatform
+XOR EDX, EDX
+MOV NPC.ScriptTimer, EDX
 MOV EDX, NPC.Direction
 CMP EDX, 0
 JE :State7OffPlatformLeft
@@ -289,14 +301,19 @@ JMP :StateAMovement
 MOV NPC.ScriptState, 8
 JMP :State8Movement
 
+:FallenOff
+MOV NPC.ScriptTimer, 0
+MOV NPC.ScriptState, 1
+JMP :Render
+
 :State8
 MOV EDX, NPC.Collision
+TEST EDX, 00000004 ;if NOT making contact with wall from the right...
+JE :State8OffPlatform
 TEST EDX, 00000008 ;if making contact with the floor...
 JNE :State8ContactLeft
 TEST EDX, 00000002 ;if making contact with the ceiling...
 JNE :State8ContactRight
-TEST EDX, 00000004 ;if NOT making contact with wall from the right...
-JE :State8OffPlatform ;change its movement
 
 :State8Movement
 CMP NPC.Direction, 0
@@ -319,7 +336,18 @@ MOV NPC.ScriptState, 9
 JMP :State9Movement
 
 :State8OffPlatform
+MOV EDX, NPC.Collision
+TEST EDX, 0000000F
+JNE :State8MoveOffPlatform
 ADD NPC.X, OFF_PLATFORM_ADJUST_X
+INC NPC.ScriptTimer
+CMP NPC.ScriptTimer, 2
+JE :FallenOff
+JMP :SetCrawlFrame
+
+:State8MoveOffPlatform
+XOR EDX, EDX
+MOV NPC.ScriptTimer, EDX
 MOV EDX, NPC.Direction
 CMP EDX, 0
 JE :State8OffPlatformLeft
