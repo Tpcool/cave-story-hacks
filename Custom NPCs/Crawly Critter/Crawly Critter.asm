@@ -28,7 +28,7 @@ WAIT_BEFORE_ATTACK = 8 ;how long the NPC will wait before it checks to see if it
 
 HORIZONTAL_LEAP_DISTANCE = 100 ;upon jumping, how far the NPC will go left/right
 
-FLIGHT_TIME = 64 ;how many frames the NPC should be in flight before falling down
+FLIGHT_TIME = 2D ;how many frames the NPC should be in flight before falling down
 
 MAX_FALL_SPEED = 5FF ;max possible falling velocity
 GRAVITY = 40 ;how much the NPC will be pulled back down to the ground every frame
@@ -36,7 +36,6 @@ GRAVITY = 40 ;how much the NPC will be pulled back down to the ground every fram
 X_VELOCITY_SCALE = 20 ;how much the horizontal movement will increase every frame during flight
 Y_VELOCITY_SCALE = 10 ;how much the vertical movement will increase every frame during flight
 X_VELOCITY_CAP = 200 ;max horizontal speed during flight
-Y_VELOCITY_CAP = 200 ;max vertical speed during flight
 
 CRAWL_SPEED = B0
 CRAWL_GRAVITY = 400
@@ -45,19 +44,26 @@ OFF_PLATFORM_ADJUST_X = 600;C00
 OFF_PLATFORM_ADJUST_Y = 300;600
 OFF_PLATFORM_ADJUST_TIMER = 2 ;how long the NPC will wait before falling down if not making any contact with a surface
 
+FALLEN_TIME_BEFORE_HOVER = A0
+
 #ENDDEFINE
 
 ENTER 0, 0
 SETPOINTER
 
+MOV EDX, NPC.Directive
+CMP NPC.Directive, 1
+JNE :FindState
+CMP NPC.Y, 20000
+JL :FindState
+MOV NPC.Y, 0
+
 :FindState
-CMP NPC.ScriptState, A
-JG :SetGravity
 MOV EDX, NPC.ScriptState
 JMP [EDX*4+:StateTable]
 
 :State0
-ADD NPC.Y, 600
+;ADD NPC.Y, 600
 JMP :State6
 
 :State1
@@ -111,7 +117,7 @@ CMP NPC.ScriptTimer, 8 ;wait this many frames before starting the jump
 JLE :SetGravity
 MOV NPC.ScriptState, 3
 MOV NPC.FrameNum, 2 ;jumping frame
-MOV NPC.MoveY, -4CC ;jump velocity
+MOV NPC.MoveY, -66C ;jump velocity
 PUSH 1 
 PUSH 1E 
 CALL PlaySound ;jump sound effect
@@ -139,8 +145,6 @@ JMP :SetGravity
 :State3
 CMP NPC.MoveY, 100 ;wait until the gravity starts bringing the NPC down, per the gravity that is being applied every frame
 JLE :SetGravity
-MOV EDX, NPC.Y
-MOV NPC.Directive, EDX ;save the initial Y position of the flight state to use as an anchor point later
 MOV NPC.ScriptState, 4 ;setup for the flight state
 MOV NPC.FrameNum, 3
 MOV NPC.ScriptTimer, 0
@@ -164,6 +168,8 @@ CMP NPC.ScriptTimer, FLIGHT_TIME ;if enough frames have not elapsed...
 JLE :CheckScriptTimerForFlightSound ;...then continue in this state and do not activate the falling sequence yet
 
 :SetState5ForState4
+CMP NPC.ObjectTimer, 0
+JG :FallenOff
 MOV NPC.Damage, 3 ;set up the falling state
 MOV NPC.ScriptState, 5
 MOV NPC.FrameNum, 2
@@ -178,18 +184,12 @@ JMP :SetGravity
 MOV EDX, NPC.ScriptTimer ;the following section will play the critter flying sound effect every few frames
 AND EDX, 00000003 ;reduce the scripttimer to a multiple of the given number
 CMP EDX, 1 ;if it is NOT reduced down to 1...
-JNE :CheckCollisionForState4 ;...then jump to the next section
+JNE :CheckFlyingFrame ;...then jump to the next section
 PUSH 1 ;otherwise, play the critter flying sound effect
 PUSH 6D 
 CALL PlaySound 
 ADD ESP, 8
 SETPOINTER
-
-:CheckCollisionForState4
-MOV EDX, NPC.Collision
-AND EDX, 00000008 ;if the NPC is NOT colliding with the floor...
-JE :CheckFlyingFrame ;...then jump to the next section
-MOV NPC.MoveY, -200 ;otherwise, push the NPC away from the ground. however, i wasn't able to get this interaction to trigger, so it may not be necessary.
 
 :CheckFlyingFrame
 INC NPC.FrameNum
@@ -224,6 +224,9 @@ MOV NPC.ScriptTimer, 0
 JMP :SetGravity
 
 :State7
+MOV EDX, NPC.HitTrue
+TEST EDX, EDX
+JNE :ExitCrawlState
 MOV EDX, NPC.Collision
 TEST EDX, 00000008 ;if NOT making contact with floor...
 JE :State7OffPlatform
@@ -276,6 +279,9 @@ MOV NPC.ScriptState, 8
 JMP :State8Movement
 
 :State8
+MOV EDX, NPC.HitTrue
+TEST EDX, EDX
+JNE :ExitCrawlState
 MOV EDX, NPC.Collision
 TEST EDX, 00000004 ;if NOT making contact with wall from the right...
 JE :State8OffPlatform
@@ -328,6 +334,9 @@ MOV NPC.ScriptState, 9
 JMP :State9Movement
 
 :State9
+MOV EDX, NPC.HitTrue
+TEST EDX, EDX
+JNE :FallenOff
 MOV EDX, NPC.Collision
 TEST EDX, 00000002 ;if NOT making contact with ceiling...
 JE :State9OffPlatform
@@ -380,6 +389,9 @@ MOV NPC.ScriptState, A
 JMP :StateAMovement
 
 :StateA
+MOV EDX, NPC.HitTrue
+TEST EDX, EDX
+JNE :ExitCrawlState
 MOV EDX, NPC.Collision
 TEST EDX, 00000001 ;if NOT making contact with wall...
 JE :StateAOffPlatform
@@ -433,13 +445,12 @@ JMP :State7Movement
 
 :FallenOff
 MOV NPC.ScriptTimer, 0
-MOV NPC.ScriptState, 1
-JMP :Render
+MOV NPC.ObjectTimer, 0
+MOV NPC.FrameNum, 2
+MOV NPC.ScriptState, B
+JMP :StateB
 
 :SetCrawlFrame
-MOV EDX, NPC.HitTrue
-TEST EDX, EDX ;if the NPC has been hit...
-JNE :State2 ;...then skip to the next section
 INC NPC.FrameTimer
 MOV EDX, NPC.FrameTimer
 SHR EDX, 3
@@ -447,9 +458,34 @@ AND EDX, 1
 MOV NPC.FrameNum, EDX
 JMP :Render
 
+:ExitCrawlState
+JMP :State2
+
+:StateB
+MOV EDX, NPC.Collision
+TEST EDX, 00000008 ;if making contact with floor...
+JNE :StateBContactGround ;...end this state and go into attack mode
+INC NPC.ObjectTimer
+CMP NPC.ObjectTimer, FALLEN_TIME_BEFORE_HOVER
+JGE :State4
+JMP :SetGravity
+
+:StateBContactGround
+MOV NPC.ScriptState, 1
+MOV NPC.ObjectTimer, 0
+MOV NPC.ScriptTimer, 0
+JMP :State1
+
+:StateC
+MOV NPC.Directive, 1
+MOV NPC.ScriptState, 6
+JMP :State6
+
 :SetGravity
 CMP NPC.ScriptState, 4 ;if the NPC is in the flight state...
 JE :CheckXVelocity ;...then jump to its unique gravity section
+CMP NPC.ObjectTimer, FALLEN_TIME_BEFORE_HOVER
+JGE :CheckXVelocity
 ADD NPC.MoveY, GRAVITY ;add to the Y velocity to simulate gravity pulling down
 CMP NPC.MoveY, MAX_FALL_SPEED ;if the current Y velocity is NOT greater than the set cap...
 JLE :AddVelocitiesToPositions ;...then jump to the next section
@@ -467,24 +503,7 @@ JMP :CheckYVelocity
 SUB NPC.MoveX, 20
 
 :CheckYVelocity
-MOV EDX, NPC.Y
-CMP EDX, NPC.Directive ;if the NPC's current Y position is less than its original Y position when it started its flight state...
-JLE :IncreaseYVelocity ;...then increase the Y velocity to ascend
-SUB NPC.MoveY, 10 ;otherwise, decrease the Y velocity to descend
-JMP :CapPositiveYVelocity
-
-:IncreaseYVelocity
-ADD NPC.MoveY, 10
-
-:CapPositiveYVelocity
-CMP NPC.MoveY, Y_VELOCITY_CAP ;if the Y velocity is NOT too high...
-JLE :CapNegativeYVelocity ;...then skip to the next section
-MOV NPC.MoveY, Y_VELOCITY_CAP ;otherwise, cap the Y velocity
-
-:CapNegativeYVelocity
-CMP NPC.MoveY, -Y_VELOCITY_CAP ;if the Y velocity is NOT too low...
-JGE :CapPositiveXVelocity ;...then skip to the next section
-MOV NPC.MoveY, -Y_VELOCITY_CAP ;otherwise, cap the Y velocity
+MOV NPC.MoveY, B0 ;otherwise, decrease the Y velocity to descend
 
 :CapPositiveXVelocity
 CMP NPC.MoveX, X_VELOCITY_CAP ;if the X velocity is NOT too high...
@@ -524,6 +543,7 @@ ADD EDX, 10 ;shift position from top of the sprite to bottom
 MOV NPC.DisplayD, EDX ;render down display rect
 
 :EndOfCode
+MOV EDX, 999999
 LEAVE
 RETN
 
@@ -539,3 +559,5 @@ print :State7
 print :State8
 print :State9
 print :StateA
+print :StateB
+print :StateC
