@@ -44,7 +44,7 @@ OFF_PLATFORM_ADJUST_X = 600;C00
 OFF_PLATFORM_ADJUST_Y = 300;600
 OFF_PLATFORM_ADJUST_TIMER = 2 ;how long the NPC will wait before falling down if not making any contact with a surface
 
-FALLEN_TIME_BEFORE_HOVER = A0
+FALLEN_TIME_BEFORE_HOVER = 60
 
 #ENDDEFINE
 
@@ -91,19 +91,19 @@ JL :SetGravity ;...then skip this section
 
 ; checks distance to see if NPC should be put in its attack state
 MOV EDX, NPC.X
-SUB EDX, HORIZONTAL_DISTANCE_CHECK_FRAME
+SUB EDX, HORIZONTAL_DISTANCE_CHECK_ATTACK
 CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player
 JGE :SetGravity ;if it is, then skip this section
 MOV EDX, NPC.X
-ADD EDX, HORIZONTAL_DISTANCE_CHECK_FRAME
+ADD EDX, HORIZONTAL_DISTANCE_CHECK_ATTACK
 CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player (from the other direction this time)
 JLE :SetGravity ;if it is, then skip this section
 MOV EDX, NPC.Y
-SUB EDX, UP_DISTANCE_CHECK_FRAME
+SUB EDX, UP_DISTANCE_CHECK_ATTACK
 CMP EDX, PlayerYPos ;check if the NPC Y position is far away from the player
 JGE :SetGravity ;if it is, then skip to the next section
 MOV EDX, NPC.Y
-ADD EDX, DOWN_DISTANCE_CHECK_FRAME
+ADD EDX, DOWN_DISTANCE_CHECK_ATTACK
 CMP EDX, PlayerYPos ;check if the NPC Y position is far away from the player (from the other direction this time)
 JLE :SetGravity ;if it is, then skip to the next section
 MOV NPC.ScriptState, 2 ;if we haven't done a jump from the distance checks, then the player is close to the NPC and should be set up to go to its attack state
@@ -172,6 +172,7 @@ CMP NPC.ObjectTimer, 0
 JG :FallenOff
 MOV NPC.Damage, 3 ;set up the falling state
 MOV NPC.ScriptState, 5
+MOV NPC.ScriptTimer, 0
 MOV NPC.FrameNum, 2
 MOV EAX, NPC.MoveX
 CDQ ;set EDX to 0 if the velocity is positive, 1 if it's negative
@@ -199,6 +200,9 @@ MOV NPC.FrameNum, 3 ;otherwise, reset the framenum back to the first flying fram
 JMP :SetGravity
 
 :State5
+INC NPC.ScriptTimer
+CMP NPC.ScriptTimer, FALLEN_TIME_BEFORE_HOVER
+JGE :FallenOff
 MOV EDX, NPC.Collision
 AND EDX, 00000008 ;if the NPC is not colliding with the floor...
 JE :SetGravity ;...then continue setting the gravity
@@ -215,6 +219,7 @@ SETPOINTER
 JMP :SetGravity
 
 :State6
+MOV NPC.FrameNum, 6
 MOV EDX, NPC.Collision
 AND EDX, 00000008 ;if the NPC is NOT colliding with the floor...
 JE :SetGravity ;...then keep the gravity in effect
@@ -446,7 +451,7 @@ JMP :State7Movement
 :FallenOff
 MOV NPC.ScriptTimer, 0
 MOV NPC.ObjectTimer, 0
-MOV NPC.FrameNum, 2
+MOV NPC.FrameNum, 0
 MOV NPC.ScriptState, B
 JMP :StateB
 
@@ -455,11 +460,14 @@ INC NPC.FrameTimer
 MOV EDX, NPC.FrameTimer
 SHR EDX, 3
 AND EDX, 1
+ADD EDX, 6
 MOV NPC.FrameNum, EDX
 JMP :Render
 
 :ExitCrawlState
-JMP :State2
+MOV NPC.FrameNum, 1
+MOV NPC.ScriptState, 2
+JMP :Render
 
 :StateB
 MOV EDX, NPC.Collision
@@ -467,11 +475,21 @@ TEST EDX, 00000008 ;if making contact with floor...
 JNE :StateBContactGround ;...end this state and go into attack mode
 INC NPC.ObjectTimer
 CMP NPC.ObjectTimer, FALLEN_TIME_BEFORE_HOVER
+JNE :StateBPart2
+MOV NPC.FrameNum, 3
+
+:StateBPart2
 JGE :State4
+MOV EDX, NPC.ObjectTimer
+SHR EDX, 4
+AND EDX, 1
+MOV NPC.FrameNum, EDX
 JMP :SetGravity
 
 :StateBContactGround
 MOV NPC.ScriptState, 1
+MOV NPC.FrameNum, 0
+MOV NPC.MoveX, 0
 MOV NPC.ObjectTimer, 0
 MOV NPC.ScriptTimer, 0
 JMP :State1
@@ -543,7 +561,6 @@ ADD EDX, 10 ;shift position from top of the sprite to bottom
 MOV NPC.DisplayD, EDX ;render down display rect
 
 :EndOfCode
-MOV EDX, 999999
 LEAVE
 RETN
 
