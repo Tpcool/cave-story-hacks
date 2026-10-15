@@ -91,19 +91,19 @@ JL :SetGravity ;...then skip this section
 
 ; checks distance to see if NPC should be put in its attack state
 MOV EDX, NPC.X
-SUB EDX, HORIZONTAL_DISTANCE_CHECK_ATTACK
+SUB EDX, HORIZONTAL_DISTANCE_CHECK_FRAME
 CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player
 JGE :SetGravity ;if it is, then skip this section
 MOV EDX, NPC.X
-ADD EDX, HORIZONTAL_DISTANCE_CHECK_ATTACK
+ADD EDX, HORIZONTAL_DISTANCE_CHECK_FRAME
 CMP EDX, PlayerXPos ;check if the NPC X position is far away from the player (from the other direction this time)
 JLE :SetGravity ;if it is, then skip this section
 MOV EDX, NPC.Y
-SUB EDX, UP_DISTANCE_CHECK_ATTACK
+SUB EDX, UP_DISTANCE_CHECK_FRAME
 CMP EDX, PlayerYPos ;check if the NPC Y position is far away from the player
 JGE :SetGravity ;if it is, then skip to the next section
 MOV EDX, NPC.Y
-ADD EDX, DOWN_DISTANCE_CHECK_ATTACK
+ADD EDX, DOWN_DISTANCE_CHECK_FRAME
 CMP EDX, PlayerYPos ;check if the NPC Y position is far away from the player (from the other direction this time)
 JLE :SetGravity ;if it is, then skip to the next section
 MOV NPC.ScriptState, 2 ;if we haven't done a jump from the distance checks, then the player is close to the NPC and should be set up to go to its attack state
@@ -265,23 +265,17 @@ MOV EDX, NPC.Collision
 TEST EDX, 0000000F
 JNE :State7MoveOffPlatform
 ADD NPC.Y, OFF_PLATFORM_ADJUST_Y
-INC NPC.ScriptTimer
-CMP NPC.ScriptTimer, OFF_PLATFORM_ADJUST_TIMER
-JE :FallenOff
-JMP :SetCrawlFrame
+JMP :OffPlatformFallenOffTest
 
 :State7MoveOffPlatform
 XOR EDX, EDX
 MOV NPC.ScriptTimer, EDX
+MOV NPC.ScriptState, 8
 MOV EDX, NPC.Direction
 CMP EDX, 0
-JE :State7OffPlatformLeft
+JE :State8Movement
 MOV NPC.ScriptState, A
 JMP :StateAMovement
-
-:State7OffPlatformLeft
-MOV NPC.ScriptState, 8
-JMP :State8Movement
 
 :State8
 MOV EDX, NPC.HitTrue
@@ -320,23 +314,17 @@ MOV EDX, NPC.Collision
 TEST EDX, 0000000F
 JNE :State8MoveOffPlatform
 ADD NPC.X, OFF_PLATFORM_ADJUST_X
-INC NPC.ScriptTimer
-CMP NPC.ScriptTimer, OFF_PLATFORM_ADJUST_TIMER
-JE :FallenOff
-JMP :SetCrawlFrame
+JMP :OffPlatformFallenOffTest
 
 :State8MoveOffPlatform
 XOR EDX, EDX
 MOV NPC.ScriptTimer, EDX
+MOV NPC.ScriptState, 9
 MOV EDX, NPC.Direction
 CMP EDX, 0
-JE :State8OffPlatformLeft
+JE :State9Movement
 MOV NPC.ScriptState, 7
 JMP :State7Movement
-
-:State8OffPlatformLeft
-MOV NPC.ScriptState, 9
-JMP :State9Movement
 
 :State9
 MOV EDX, NPC.HitTrue
@@ -375,23 +363,17 @@ MOV EDX, NPC.Collision
 TEST EDX, 0000000F
 JNE :State9MoveOffPlatform
 SUB NPC.Y, OFF_PLATFORM_ADJUST_Y
-INC NPC.ScriptTimer
-CMP NPC.ScriptTimer, OFF_PLATFORM_ADJUST_TIMER
-JE :FallenOff
-JMP :SetCrawlFrame
+JMP :OffPlatformFallenOffTest
 
 :State9MoveOffPlatform
 XOR EDX, EDX
 MOV NPC.ScriptTimer, EDX
+MOV NPC.ScriptState, A
 MOV EDX, NPC.Direction
 CMP EDX, 0
-JE :State9OffPlatformLeft
+JE :StateAMovement
 MOV NPC.ScriptState, 8
 JMP :State8Movement
-
-:State9OffPlatformLeft
-MOV NPC.ScriptState, A
-JMP :StateAMovement
 
 :StateA
 MOV EDX, NPC.HitTrue
@@ -430,6 +412,8 @@ MOV EDX, NPC.Collision
 TEST EDX, 0000000F
 JNE :StateAMoveOffPlatform
 SUB NPC.X, OFF_PLATFORM_ADJUST_X
+
+:OffPlatformFallenOffTest
 INC NPC.ScriptTimer
 CMP NPC.ScriptTimer, OFF_PLATFORM_ADJUST_TIMER
 JE :FallenOff
@@ -438,15 +422,12 @@ JMP :SetCrawlFrame
 :StateAMoveOffPlatform
 XOR EDX, EDX
 MOV NPC.ScriptTimer, EDX
+MOV NPC.ScriptState, 7
 MOV EDX, NPC.Direction
 CMP EDX, 0
-JE :StateAOffPlatformLeft
+JE :State7Movement
 MOV NPC.ScriptState, 9
 JMP :State9Movement
-
-:StateAOffPlatformLeft
-MOV NPC.ScriptState, 7
-JMP :State7Movement
 
 :FallenOff
 MOV NPC.ScriptTimer, 0
